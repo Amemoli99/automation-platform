@@ -26,7 +26,7 @@ for (const text of Object.values(src)) {
 
 let ko = 0, checked = 0;
 // Si controllano i file che orchestrano (main, sessione, stato, rotte, auth/static): i servizi hanno testi e regex con parole uguali ai nomi dei moduli.
-const ORCH = (f) => /\/(main|state|service-host|supervisor)\.js$|\/areas\/\w+\/(session|routes|[\w-]+-routes|activate|mode)\.js$|\/gateway\/|\/http\/(auth|static|route)\.js$/.test(f.split(path.sep).join('/'));
+const ORCH = (f) => /\/(main|state|service-host|supervisor)\.js$|\/areas\/\w+\/(session|routes|[\w-]+-routes|activate|mode)\.js$|\/gateway\/|\/service-entries\/|\/http\/(auth|static|route)\.js$/.test(f.split(path.sep).join('/'));
 for (const f of files.filter(ORCH)) {
   const text = strip(src[f]);
   const declared = new Set();

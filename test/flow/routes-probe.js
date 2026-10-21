@@ -19,7 +19,7 @@ const ROUTES = [
   ['GET', '/api/mcp/ask-active?server=nessuno'], ['GET', '/api/mcp/ask-status?id=x'], ['GET', '/api/pipelines/fix-active?kind=agent&name=x'],
   ['GET', '/api/pipelines'], ['GET', '/api/pipelines/steps?skill=implementTest'], ['GET', '/api/pipelines/link-preview?skill=implementTest&agent=test-coder'],
   ['GET', '/api/pipelines/fix-status?id=x'], ['GET', '/api/pipelines/item?kind=agent&name=test-coder'], ['GET', '/api/version'],
-  ['GET', '/api/tools/catalog'], ['GET', '/api/jdks'], ['GET', '/api/non-esiste'], ['GET', '/non-esiste.html'],
+  ['GET', '/api/tools/catalog'], ['GET', '/api/tools'], ['GET', '/api/tools/mcp-status'], ['POST', '/api/tools/add', { type: 'zzz', id: 'x' }], ['POST', '/api/tools/add', { type: 'mcp', id: 'Non valido!' }], ['GET', '/api/jdks'], ['GET', '/api/non-esiste'], ['GET', '/non-esiste.html'],
   ['GET', '/'], ['GET', '/mcp.html'], ['GET', '/pipelines.html'], ['GET', '/mcpview.js'],
   ['POST', '/api/license/import', { text: '' }], ['POST', '/api/send', { text: 'x' }], ['POST', '/api/stop', {}], ['POST', '/api/btw', { question: 'ciao' }],
   ['POST', '/api/allow', { rules: [] }], ['POST', '/api/tests/existing', { keys: ['NX-1', 'x'] }], ['POST', '/api/pipeline/preview', { ticket: 'NX-1 prova' }],

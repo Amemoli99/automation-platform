@@ -104,6 +104,7 @@ const SUITES = {
     { name: 'permessi concessi e domande a margine', file: 'test/flow/allow-test.js', env: { stub: 'stub_allow_claude.js' }, withLog: true },
     { name: 'servizi: Jira come processo separato', file: 'test/flow/services-test.js', env: { noProject: true }, args: ['on'], needsServices: true },
     { name: 'servizi: se non parte, Jira resta in-process', file: 'test/flow/services-test.js', env: { noProject: true, env: { NACP_SERVICE_ENTRY_JIRA: 'C:/non/esiste/jira.js' } }, args: ['fallback'], needsServices: true },
+    { name: 'servizi: Tools con il contesto del gateway', file: 'test/flow/tools-service-test.js', env: { env: { NACP_SERVICES: 'jira,tools' } }, needsServices: true },
     { name: 'sgancio alla chiusura', file: 'test/flow/detach-test.js', env: {}, withData: true },
     { name: 'rotte del server (stato e messaggi identici al registro)', file: 'test/flow/routes-probe.js', env: { stub: 'stub_live_claude.js' }, withRoot: true },
   ],

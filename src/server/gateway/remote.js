@@ -1,22 +1,24 @@
 // Aree che girano come servizi separati (processi figli su pipe con nome). Il gateway controlla accesso e permessi come sempre,
 // poi inoltra le richieste di quelle aree al loro servizio. Se un servizio non parte, l'area resta in-process: l'app non si ferma.
-//   NACP_SERVICES=jira,...   aree da avviare come servizi (default: jira); vuoto oppure NACP_INPROC=1 = tutto in un processo.
+//   NACP_SERVICES=jira,...   aree da avviare come servizi (default: jira, tools); vuoto oppure NACP_INPROC=1 = tutto in un processo.
 'use strict';
 const fs = require('fs');
 const path = require('path');
 const paths = require('../infra/paths');
+const ipc = require('../infra/ipc');
 const { createSupervisor } = require('../supervisor');
 const { state } = require('../state');
 
 // area -> prefissi di rotta serviti dal servizio. Un servizio per area (stesso nome).
 const TABLE = {
   jira: ['/api/jira/'],
+  tools: ['/api/tools'],
 };
 
 function enabledNames() {
   if (process.env.NACP_INPROC === '1') return [];
   const raw = process.env.NACP_SERVICES;
-  const list = raw === undefined ? ['jira'] : raw.split(',').map((s) => s.trim()).filter(Boolean);
+  const list = raw === undefined ? ['jira', 'tools'] : raw.split(',').map((s) => s.trim()).filter(Boolean);
   return list.filter((n) => TABLE[n]);
 }
 
@@ -54,19 +56,20 @@ function create({ log = () => {} } = {}) {
     for (const n of live) if (TABLE[n].some((pre) => p.startsWith(pre))) return n;
     return null;
   };
-  const forward = (name, req, res) => sup.forward(name, req, res);
+  const forward = (name, req, res, context) => sup.forward(name, req, res, context);
   const call = (name, opts) => sup.call(name, opts);
   // Messaggio di controllo al servizio (es. 'demo'): lo gestisce il suo punto d'ingresso.
   async function control(name, op, body) {
     const r = await sup.call(name, { method: 'POST', url: '/_nacp/control/' + op, body: body || {}, waitMs: 8000 });
+    if (r.status === 404 && /Controllo sconosciuto/.test(r.body.toString('utf8'))) return { ok: true, ignored: true }; // il servizio non ha questo controllo: non lo riguarda
     if (r.status !== 200) throw new Error('Il servizio "' + name + '" ha rifiutato "' + op + '": ' + r.body.toString('utf8').slice(0, 200));
     return JSON.parse(r.body.toString('utf8'));
   }
   const broadcast = (op, body) => Promise.all([...live].map((n) => control(n, op, body)));
   // Come chiamare un'area: via servizio se gira separata, altrimenti con la funzione locale.
-  async function callOr(name, opts, local) {
+  async function callOr(name, opts, local, context) {
     if (!has(name)) return local();
-    const r = await call(name, opts);
+    const r = await call(name, { ...opts, headers: { ...(opts.headers || {}), [ipc.CONTEXT_HEADER]: ipc.encodeContext(context) } });
     if (r.status !== 200) throw new Error('Servizio "' + name + '": ' + r.status);
     return JSON.parse(r.body.toString('utf8'));
   }

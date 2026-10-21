@@ -3,7 +3,7 @@
 // Il gateway ha già controllato accesso e permessi: qui si verifica solo il token del supervisore (infra/ipc.js).
 // Non importa nessuna area: le rotte arrivano dal chiamante, così lo stesso host serve qualunque area e le prove.
 'use strict';
-const { serve } = require('./infra/ipc');
+const { serve, decodeContext, CONTEXT_HEADER } = require('./infra/ipc');
 const { NOT_HANDLED } = require('./http/route');
 
 const MAX_BODY = 40 * 1024 * 1024; // gli allegati arrivano in base64
@@ -37,7 +37,7 @@ async function runService({ name, routes, pipe, token, controls = {} }) {
       }
       const kind = req.method === 'GET' ? 'get' : req.method === 'POST' ? 'post' : null;
       if (kind) {
-        const ctx = { req, res, json, body: kind === 'post' ? await readBody(req) : null, shutdown };
+        const ctx = { req, res, json, body: kind === 'post' ? await readBody(req) : null, shutdown, context: decodeContext(req.headers[CONTEXT_HEADER]) };
         for (const m of modules) {
           if (typeof m[kind] !== 'function') continue;
           if ((await m[kind](ctx)) !== NOT_HANDLED) return;

@@ -16,7 +16,7 @@ const waitFor = async (fn, ms = 10000) => { const t0 = Date.now(); while (Date.n
   let s, j, via;
   [s, j] = await get('/api/services');
   if (mode === 'fallback') {
-    t('nessun servizio avviato (entry mancante)', s === 200 && Object.keys(j).length === 0, j);
+    t('Jira non è tra i servizi avviati (entry mancante)', s === 200 && !('jira' in j), j);
     [s, j, via] = await get('/api/jira/state');
     t('Jira risponde lo stesso, dentro il gateway', s === 200 && j.configured === false && via === null, [s, via]);
     [s, j, via] = await post('/api/jira/search', { jql: 'x' });

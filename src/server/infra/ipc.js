@@ -9,6 +9,10 @@ const os = require('os');
 const path = require('path');
 
 const HEADER = 'x-nacp-token';
+const CONTEXT_HEADER = 'x-nacp-context'; // contesto della richiesta (progetto, preferenze, Demo): lo scrive solo il gateway
+const EMPTY_CONTEXT = { root: null, prefs: {}, demo: false };
+const encodeContext = (c) => Buffer.from(JSON.stringify(c || EMPTY_CONTEXT), 'utf8').toString('base64');
+function decodeContext(v) { try { const c = JSON.parse(Buffer.from(String(v || ''), 'base64').toString('utf8')); return { ...EMPTY_CONTEXT, ...c }; } catch { return { ...EMPTY_CONTEXT }; } }
 const newId = (bytes = 8) => crypto.randomBytes(bytes).toString('hex');
 const pipePath = (session, name) => (process.platform === 'win32'
   ? '\\\\.\\pipe\\nacp-' + session + '-' + name
@@ -50,9 +54,11 @@ function request({ pipe, token, method = 'GET', url = '/', headers = {}, body, t
 }
 
 // Inoltra una richiesta del browser a un servizio senza interpretarla (anche flussi SSE): il gateway ha già controllato accesso e permessi.
-function forward({ pipe, token, req, res, onError }) {
+function forward({ pipe, token, req, res, context, onError }) {
   const headers = { ...req.headers, [HEADER]: token };
   delete headers.cookie; delete headers.host; delete headers.origin; // dati del browser: il servizio non li vede
+  delete headers[CONTEXT_HEADER]; // un contesto scritto dal browser non vale: lo imposta solo il gateway
+  headers[CONTEXT_HEADER] = encodeContext(context);
   const up = http.request({ socketPath: pipe, method: req.method, path: req.url, headers }, (r) => {
     res.writeHead(r.statusCode, r.headers);
     r.pipe(res);
@@ -63,4 +69,4 @@ function forward({ pipe, token, req, res, onError }) {
   req.pipe(up);
 }
 
-module.exports = { HEADER, newId, pipePath, serve, request, forward };
+module.exports = { HEADER, CONTEXT_HEADER, encodeContext, decodeContext, newId, pipePath, serve, request, forward };

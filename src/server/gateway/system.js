@@ -24,7 +24,7 @@ module.exports = {
       const jdk = state.root ? prefsFor(state.root).jdk : '';
       const safe = async (fn) => { try { return await fn(); } catch { return null; } };
       const diag = (await safe(() => config.diagnostics(state.root || projects.KIT, { noProject: !state.root, jdk }))) || [];
-      const toolsInfo = await safe(() => tools.collect(state.root, jdk));
+      const toolsInfo = await safe(() => ctx.remote.callOr('tools', { url: '/api/tools' }, () => tools.collect(state.root, jdk), ctx.context));
       let project = { attached: false };
       if (state.root) {
         const insp = await safe(() => projects.inspect(state.root, prefsFor(state.root)));

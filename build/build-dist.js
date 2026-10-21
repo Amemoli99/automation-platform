@@ -42,7 +42,8 @@ const OBF = {
 };
 const stats = [];
 for (const [entry, out] of [[path.join('src', 'server', 'main.js'), path.join('ui', 'server.js')], [path.join('src', 'server', 'areas', 'demo', 'sim.js'), path.join('ui', 'demo', 'sim.js')],
-  [path.join('src', 'server', 'service-entries', 'jira.js'), path.join('ui', 'services', 'jira.js')]]) { // un file per processo: gateway, simulatore Demo, servizio Jira
+  [path.join('src', 'server', 'service-entries', 'jira.js'), path.join('ui', 'services', 'jira.js')],
+  [path.join('src', 'server', 'service-entries', 'tools.js'), path.join('ui', 'services', 'tools.js')]]) { // un file per processo: gateway, simulatore Demo, servizi
   const bundled = esbuild.buildSync({
     entryPoints: [path.join(SRC, entry)], bundle: true, platform: 'node', format: 'cjs', target: 'node18',
     minify: true, legalComments: 'none', write: false, logLevel: 'warning',

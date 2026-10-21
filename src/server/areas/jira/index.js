@@ -1,4 +1,4 @@
-// Interfaccia pubblica dell'area 'jira': gli altri moduli importano solo da qui, mai dai file interni.
+// Interfaccia pubblica dell'area 'jira': gli altri moduli importano solo da qui, mai dai file interni. I moduli si caricano al primo uso (un servizio non trascina l'intera area).
 module.exports = {
-  jira: require('./jira'),
+  get jira() { return require('./jira'); },
 };

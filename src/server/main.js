@@ -11,7 +11,7 @@ const { openInIde } = require('./areas/platform').ide;
 const { capFor, denyMessage } = require('./http/caps');
 const { createAuth } = require('./http/auth');
 const { serveStatic } = require('./http/static');
-const { state, saveState, needRoot } = require('./state');
+const { state, saveState, needRoot, prefsFor } = require('./state');
 const session = require('./areas/session').session;
 const demoMode = require('./areas/demo').mode;
 const { NOT_HANDLED } = require('./http/route');
@@ -89,7 +89,9 @@ const server = http.createServer(async (req, res) => {
   const json = (code, obj) => res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }).end(JSON.stringify(obj));
   if (auth.guard(req, res, json)) return;
 
-  const ctx = { req, res, json, body: null, shutdown, remote };
+  // contesto della richiesta: ciò che le aree (anche quelle in un altro processo) devono sapere dello stato, senza leggerlo
+  const context = { root: state.root, prefs: state.root ? prefsFor(state.root) : {}, demo: !!state.demo };
+  const ctx = { req, res, json, body: null, shutdown, remote, context };
   try {
     const need = capFor(req.method, req.url);
     if (need) {
@@ -103,7 +105,7 @@ const server = http.createServer(async (req, res) => {
         if (!(req.headers['content-type'] || '').includes('application/json')) return json(415, { error: 'JSON richiesto' });
         if (state.demo && demo.BLOCKED.has(req.url)) return json(403, { error: 'Non disponibile in modalità Demo: è una simulazione, non modifica nulla di reale.' });
       }
-      return remote.forward(svcName, req, res);
+      return remote.forward(svcName, req, res, context);
     }
     if (req.method === 'GET') {
       for (const area of AREAS) { if ((await area.get(ctx)) !== NOT_HANDLED) return; }

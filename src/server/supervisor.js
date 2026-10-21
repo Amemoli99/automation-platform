@@ -76,9 +76,9 @@ function createSupervisor({ services, restart = {}, readyTimeoutMs = 15000, onEv
       return ipc.request({ pipe: s.pipe, token, ...opts });
     },
     // Inoltra la richiesta del browser (gateway). Se il servizio non è disponibile risponde 503 con il motivo.
-    async forward(name, req, res) {
+    async forward(name, req, res, context) {
       try { await whenReady(get(name), 3000); } catch (e) { res.writeHead(503, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: e.message })); return; }
-      ipc.forward({ pipe: get(name).pipe, token, req, res });
+      ipc.forward({ pipe: get(name).pipe, token, req, res, context });
     },
     status() { return Object.fromEntries(Object.values(svc).map((s) => [s.name, { state: s.state, pid: s.pid, pipe: s.pipe, crashes: s.crashes.length }])); },
     // Fermata ordinata: richiesta di chiusura, attesa breve, poi terminazione dell'albero di processi.

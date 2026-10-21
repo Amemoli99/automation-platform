@@ -1,4 +1,4 @@
-// Interfaccia pubblica dell'area 'pipelines': gli altri moduli importano solo da qui, mai dai file interni.
+// Interfaccia pubblica dell'area 'pipelines': gli altri moduli importano solo da qui, mai dai file interni. I moduli si caricano al primo uso (un servizio non trascina l'intera area).
 module.exports = {
-  pipelines: require('./pipelines'),
+  get pipelines() { return require('./pipelines'); },
 };
