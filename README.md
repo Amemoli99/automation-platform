@@ -9,6 +9,7 @@ Il "cockpit" da cui si pilota lo sviluppo di test automatici (framework Aletheia
 
 - Doppio clic su `NexsoftAutomationCockpit.exe` (apre il server e il browser su http://127.0.0.1:4173/), oppure
 - da terminale, in questa cartella: `node ui\server.js`
+- **dal repository** (dopo `git clone`): `npm start`, oppure costruisci l'eseguibile una volta con `npm run exe` (serve solo Windows, usa il compilatore già presente) e poi doppio clic su `NexsoftAutomationCockpit.exe`: nel repository avvia `src\server\main.js`, nel pacchetto `ui\server.js`. L'exe non è nel repository (file binario): ogni clone lo costruisce con `npm run exe`. `npm run test:exe` ne verifica l'avvio.
 
 Per chiudere usa il pulsante **Chiudi** nel menu laterale.
 

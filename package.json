@@ -10,6 +10,8 @@
     "test:flow": "node test/run.js flow",
     "test:smoke": "node test/run.js smoke",
     "dist": "node build/build-dist.js",
+    "exe": "powershell -NoProfile -ExecutionPolicy Bypass -File launcher/build-exe.ps1",
+    "test:exe": "node test/smoke/launcher-test.js",
     "dist:zip": "node build/build-dist.js && python build/zip.py",
     "test:dist": "node test/run.js smoke --dist"
   },

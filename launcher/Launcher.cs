@@ -1,5 +1,5 @@
 // Launcher di Nexsoft Automation Cockpit. Build: ui\build-exe.ps1
-// Avvia `node ui\server.js` (se la porta non è già in ascolto) e apre il browser.
+// Avvia il server con `node` (ui\server.js nel pacchetto, src\server\main.js nel repository), se la porta non è già in ascolto, e apre il browser.
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -47,14 +47,16 @@ static class Launcher
     static int Main()
     {
         var root = AppDomain.CurrentDomain.BaseDirectory;
+        // Pacchetto distribuito: ui\server.js (unito e offuscato). Repository: src\server\main.js (sorgenti).
         var server = Path.Combine(root, "ui", "server.js");
+        if (!File.Exists(server)) server = Path.Combine(root, "src", "server", "main.js");
         int port;
         if (!int.TryParse(Environment.GetEnvironmentVariable("UI_PORT"), out port)) port = 4173;
         var url = "http://" + Host + ":" + port + "/";
 
         if (!File.Exists(server))
         {
-            MessageBox.Show("Non trovo ui\\server.js accanto all'eseguibile:\n" + server, "Nexsoft Automation Cockpit", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show("Non trovo il server accanto all'eseguibile (cercato ui\\server.js e src\\server\\main.js):\n" + root, "Nexsoft Automation Cockpit", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return 1;
         }
 
