@@ -59,5 +59,5 @@ const post = async (p, b) => { const r = await fetch(base + p, { method: 'POST',
   t('il simulatore risponde (eventi)', !!(chunk && chunk.value && chunk.value.length > 0));
   await post('/api/stop', {}); await post('/api/demo', { on: false });
   console.log('\nRISULTATO: ' + ok + ' ok, ' + ko + ' ko');
-  process.exit(ko ? 1 : 0);
+  setTimeout(() => process.exit(ko ? 1 : 0), 250); // uscita differita: chiudere subito con connessioni aperte fa crashare libuv su Windows
 })().catch((e) => { console.log('ERRORE', e.message); process.exit(2); });

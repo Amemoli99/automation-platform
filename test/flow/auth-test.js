@@ -40,5 +40,5 @@ const call = (p, o = {}) => fetch(base + p, { redirect: 'manual', ...o });
   r = await call('/api/stop', { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: base } , body: '{}' });
   t('POST senza cookie: 401', r.status === 401, r.status);
   console.log('RISULTATO: ' + ok + ' ok, ' + ko + ' ko');
-  process.exit(ko ? 1 : 0);
+  setTimeout(() => process.exit(ko ? 1 : 0), 250); // uscita differita: chiudere subito con connessioni aperte fa crashare libuv su Windows
 })().catch((e) => { console.log('ERRORE', e.message); process.exit(2); });

@@ -42,5 +42,5 @@ async function events(ms) {
   const done = await waitFor(async () => { const ev = await events(600); const st = ev.filter((e) => e.type === 'status').pop(); return st && ['done', 'waiting', 'error'].includes(st.data.status) ? st.data.status : null; });
   t('la sessione ripresa si conclude', done === 'done' || done === 'waiting', done);
   console.log('RISULTATO: ' + ok + ' ok, ' + ko + ' ko');
-  process.exit(ko ? 1 : 0);
+  setTimeout(() => process.exit(ko ? 1 : 0), 250); // uscita differita: chiudere subito con connessioni aperte fa crashare libuv su Windows
 })().catch((e) => { console.log('ERRORE', e.message); process.exit(2); });

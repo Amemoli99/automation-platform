@@ -10,7 +10,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const lic = require('../src/server/services/license');
+const lic = require('../src/server/areas/license').license;
 
 const args = process.argv.slice(2);
 const cmd = args.shift();
@@ -35,14 +35,14 @@ if (cmd === 'machine') {
   console.log('Chiave privata :', priv, '  <-- CUSTODISCILA: backup sicuro, mai in git né nel kit');
   console.log('Chiave pubblica:', pub);
   if (opt.embed) {
-    const f = path.join(__dirname, '..', 'src', 'server', 'services', 'license.js');
+    const f = path.join(__dirname, '..', 'src', 'server', 'areas', 'license', 'license.js');
     const src = fs.readFileSync(f, 'utf8');
     const re = /^const PUBLIC_KEY_PEM = .*;$/m;
-    if (!re.test(src)) die('non trovo PUBLIC_KEY_PEM in src/server/services/license.js');
-    if (!/^const PUBLIC_KEY_PEM = null;$/m.test(src) && !opt.force) die('src/server/services/license.js contiene già una chiave pubblica: usa --force per sostituirla (le licenze già emesse smetterebbero di valere).');
+    if (!re.test(src)) die('non trovo PUBLIC_KEY_PEM in src/server/areas/license/license.js');
+    if (!/^const PUBLIC_KEY_PEM = null;$/m.test(src) && !opt.force) die('src/server/areas/license/license.js contiene già una chiave pubblica: usa --force per sostituirla (le licenze già emesse smetterebbero di valere).');
     fs.writeFileSync(f, src.replace(re, () => 'const PUBLIC_KEY_PEM = ' + JSON.stringify(k.publicPem) + ';'));
-    console.log('Chiave pubblica incorporata in src/server/services/license.js: da ora l\'app richiede una licenza.');
-  } else console.log('Per attivare le licenze nell\'app: rilancia con --embed (oppure copia la chiave pubblica in src/server/services/license.js).');
+    console.log('Chiave pubblica incorporata in src/server/areas/license/license.js: da ora l\'app richiede una licenza.');
+  } else console.log('Per attivare le licenze nell\'app: rilancia con --embed (oppure copia la chiave pubblica in src/server/areas/license/license.js).');
 } else if (cmd === 'issue') {
   const privatePem = fs.readFileSync(path.resolve(need('private')), 'utf8');
   const text = lic.issue({ privatePem, org: need('org'), user: need('user'), email: need('email'), role: need('role'), machine: need('machine'), days: opt.days || 90 });

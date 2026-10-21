@@ -33,5 +33,5 @@ const TYPES = { js: 'text/javascript', css: 'text/css', webp: 'image/webp' };
     t('percorso non consentito: ' + bad, y.status === 404 && !/"name": "automation-platform"/.test(body), [y.status, body.slice(0, 40)]);
   }
   console.log('RISULTATO: ' + ok + ' ok, ' + ko + ' ko');
-  process.exit(ko ? 1 : 0);
+  setTimeout(() => process.exit(ko ? 1 : 0), 250); // uscita differita: chiudere subito con connessioni aperte fa crashare libuv su Windows
 })().catch((e) => { console.log('ERRORE', e.message); process.exit(2); });

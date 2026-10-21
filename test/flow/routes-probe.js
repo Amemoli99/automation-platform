@@ -50,5 +50,5 @@ const ROUTES = [
   for (const k of Object.keys(want)) if (got[k] !== want[k]) { ko++; console.log('  KO  ' + k + '\n        atteso: ' + want[k] + '\n        ottenuto: ' + got[k]); }
   for (const k of Object.keys(got)) if (!(k in want)) { ko++; console.log('  KO  rotta non registrata: ' + k); }
   console.log(ko ? 'RISULTATO: ' + ko + ' differenze su ' + Object.keys(want).length + ' rotte' : 'RISULTATO: ' + Object.keys(want).length + ' rotte identiche al registro');
-  process.exit(ko ? 1 : 0);
+  setTimeout(() => process.exit(ko ? 1 : 0), 250); // uscita differita: chiudere subito con connessioni aperte fa crashare libuv su Windows
 })().catch((e) => { console.log('ERRORE', e.message); process.exit(2); });

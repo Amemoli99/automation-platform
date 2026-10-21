@@ -42,5 +42,5 @@ const freePort = () => new Promise((res) => { const s = net.createServer(); s.li
   t('il server si ferma', down);
   fs.rmSync(dir, { recursive: true, force: true });
   console.log('RISULTATO: ' + ok + ' ok, ' + ko + ' ko');
-  process.exit(ko ? 1 : 0);
+  setTimeout(() => process.exit(ko ? 1 : 0), 250); // uscita differita: chiudere subito con connessioni aperte fa crashare libuv su Windows
 })().catch((e) => { console.log('ERRORE', e.message); process.exit(2); });

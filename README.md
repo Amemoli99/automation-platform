@@ -99,16 +99,24 @@ I test preparano da soli licenza di prova (chiave creata al volo), progetto, fin
 ### Struttura del repository
 
 ```
-src/server/main.js        avvio del server HTTP, controlli comuni, smistamento alle aree
-src/server/http/          caps.js (permessi per rotta), auth.js (token, cookie, Origin/Host), static.js (pagine con CSP a nonce)
-src/server/routes/        una area per file: system, run, config, project, repos, git, jira, mcp, pipelines, tools
-src/server/session.js     sessione con claude: processo, eventi SSE, testo e azioni in diretta, permessi, Ask Claude, Demo
+src/server/main.js        gateway: server HTTP, controlli comuni (accesso, permessi), smistamento alle aree
+src/server/http/          auth.js (token, cookie, Origin/Host), caps.js (permessi per rotta), static.js, route.js
+src/server/gateway/       system.js: rotte che mettono insieme più aree (versione, diagnostica, IDE, chiusura)
 src/server/state.js       stato per utente (progetto agganciato, recenti, origini, scelte) salvato in %APPDATA%
-src/server/services/      logica di dominio senza HTTP: projects, pipelines, jira, git, repos, tools, license, redact, ...
 src/server/infra/         paths.js (cartelle e dati), claude.js (unico punto che lancia claude), proc.js (kill dell'albero)
+src/server/areas/         un'area per ambito, ognuna con interfaccia pubblica (index.js) e le proprie rotte:
+  license/                licenza e profili
+  jira/                   connessione, query e ticket
+  scm/                    git e origini (GitHub/GitLab), clone
+  mcp/                    server MCP del progetto: credenziali, tool, schede, domande a Claude
+  pipelines/              editor di skill e agent
+  project/                progetto attivo, wizard, configurazione, JDK, cambio progetto
+  tools/                  scheda Tool: rilevati, catalogo, registro MCP
+  session/                sessione con claude: processo, eventi SSE, in diretta, permessi, Ask Claude, redact
+  demo/                   modalità Demo e simulatore (sim.js)
+  platform/               versione, report di diagnostica, apertura in IntelliJ
 src/server/assets/        catalog.json, skill-steps.json, version.json, templates/
-src/server/demo/sim.js    simulatore della modalità Demo (processo a parte)
-src/web/                  index.html (solo markup) + css/app.css + js/*.js (uno per scheda, caricati in ordine; boot.js per ultimo), pipelines.html, mcp.html
+src/web/                  index.html (solo markup) + css/app.css + js/*.js (uno per scheda; boot.js per ultimo), pipelines.html, mcp.html
 launcher/                 Launcher.cs e build-exe.ps1 (eseguibile)
 kit/                      skill e agent forniti ai progetti
 build/                    build-dist.js (pacchetto offuscato), zip.py
@@ -117,5 +125,7 @@ tools/license.js          strumento di chi emette le licenze (la chiave privata 
 ```
 
 Gli script della pagina sono script classici che condividono lo stesso ambito globale: in un solo file le funzioni sono disponibili fin dall'inizio, con più file un'istruzione eseguita al caricamento può usare solo ciò che è già stato caricato. Per questo le istruzioni di avvio stanno in `js/boot.js`, l'ultimo script.
+
+Architettura (imposta da `test/unit/architecture-test.js`): tra aree si importa solo `areas/<area>/index.js` e solo lungo le dipendenze dichiarate nel test; nessun ciclo; le aree non importano il gateway; il nucleo (`infra`, `state`) non importa aree. Una nuova funzione = rotta nell'area giusta + logica nell'area. Le aree sono i punti in cui, se servisse, il server si potrebbe dividere in processi separati.
 
 Regole: le rotte non contengono logica di dominio (stanno in `services/`); chi lancia `claude` usa `infra/claude.js`; percorsi e dati utente passano solo da `infra/paths.js`; un test (`test/unit/caps-test.js`) blocca ogni cambiamento involontario dei permessi per rotta e `test/flow/routes-golden.json` registra stato e messaggi delle rotte.

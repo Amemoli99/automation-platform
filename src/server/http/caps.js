@@ -1,5 +1,5 @@
 // Profili e permessi: ogni rotta richiede un permesso del profilo (licenza).
-const license = require('../services/license');
+const license = require('../areas/license').license;
 
 // La prima regola che corrisponde vince; ciò che non è elencato è leggibile da tutti (GET) o riservato all'Administrator (POST e altro):
 // così una funzione nuova nasce chiusa. Un test (test/unit/caps-test.js) blocca ogni cambiamento involontario.

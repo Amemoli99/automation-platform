@@ -47,5 +47,5 @@ async function capture(ms) {
   t('al ricollegamento non restano istantanee "in corso"', re.filter((e) => e.type === 'live').length === 0, re.filter((e) => e.type === 'live').length);
   t('la diretta si chiude a fine processo', ev.some((e) => e.type === 'live-clear'), ev.map((e) => e.type).slice(-6));
   console.log('\nRISULTATO: ' + ok + ' ok, ' + ko + ' ko');
-  process.exit(ko ? 1 : 0);
+  setTimeout(() => process.exit(ko ? 1 : 0), 250); // uscita differita: chiudere subito con connessioni aperte fa crashare libuv su Windows
 })().catch((e) => { console.log('ERRORE', e.message); process.exit(2); });

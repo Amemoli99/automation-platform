@@ -41,7 +41,7 @@ const OBF = {
   numbersToExpressions: true, simplify: true, selfDefending: false, debugProtection: false, disableConsoleOutput: false, unicodeEscapeSequence: false,
 };
 const stats = [];
-for (const [entry, out] of [[path.join('src', 'server', 'main.js'), path.join('ui', 'server.js')], [path.join('src', 'server', 'demo', 'sim.js'), path.join('ui', 'demo', 'sim.js')]]) {
+for (const [entry, out] of [[path.join('src', 'server', 'main.js'), path.join('ui', 'server.js')], [path.join('src', 'server', 'areas', 'demo', 'sim.js'), path.join('ui', 'demo', 'sim.js')]]) {
   const bundled = esbuild.buildSync({
     entryPoints: [path.join(SRC, entry)], bundle: true, platform: 'node', format: 'cjs', target: 'node18',
     minify: true, legalComments: 'none', write: false, logLevel: 'warning',

@@ -11,7 +11,7 @@ const SERVER_DIR = IN_SOURCE ? path.resolve(__dirname, '..') : __dirname;
 const KIT_DIR = IN_SOURCE ? path.resolve(SERVER_DIR, '..', '..') : path.resolve(__dirname, '..'); // radice dello strumento (non un progetto dell'utente)
 const ASSETS_DIR = IN_SOURCE ? path.join(SERVER_DIR, 'assets') : SERVER_DIR; // catalog.json, skill-steps.json, version.json, templates/
 const WEB_DIR = IN_SOURCE ? path.join(KIT_DIR, 'src', 'web') : path.join(SERVER_DIR, 'public'); // pagine servite al browser
-const SIM_FILE = path.join(SERVER_DIR, 'demo', 'sim.js'); // simulatore della modalità Demo (processo a parte)
+const SIM_FILE = IN_SOURCE ? path.join(SERVER_DIR, 'areas', 'demo', 'sim.js') : path.join(SERVER_DIR, 'demo', 'sim.js'); // simulatore della modalità Demo (processo a parte)
 const APP_DIR = IN_SOURCE ? path.join(KIT_DIR, 'src') : SERVER_DIR; // cartella su cui si calcola l'impronta della build
 const KIT_CLAUDE = path.join(KIT_DIR, 'kit', '.claude'); // skill e agent forniti col Cockpit
 

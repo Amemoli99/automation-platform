@@ -10,7 +10,7 @@ const net = require('net');
 const { spawn } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
-const lic = require(path.join(ROOT, 'src', 'server', 'services', 'license'));
+const lic = require(path.join(ROOT, 'src', 'server', 'areas', 'license', 'license'));
 const FIX = path.join(__dirname, 'fixtures');
 const TMP = path.join(ROOT, '.tmp', 'test');
 
@@ -92,7 +92,7 @@ async function startEnv(name, opt = {}) {
 }
 
 const SUITES = {
-  unit: [{ name: 'mascheramento dei segreti', file: 'test/unit/redact-test.js', unit: true }, { name: 'permessi per rotta', file: 'test/unit/caps-test.js', unit: true }, { name: 'nomi usati e non dichiarati', file: 'test/unit/scope-test.js', unit: true }],
+  unit: [{ name: 'mascheramento dei segreti', file: 'test/unit/redact-test.js', unit: true }, { name: 'permessi per rotta', file: 'test/unit/caps-test.js', unit: true }, { name: 'nomi usati e non dichiarati', file: 'test/unit/scope-test.js', unit: true }, { name: 'architettura: aree, interfacce, dipendenze', file: 'test/unit/architecture-test.js', unit: true }],
   flow: [
     { name: 'diretta: finestre, mascheramento, output', file: 'test/flow/live-test.js', env: { stub: 'stub_live_claude.js', secretEnv: true } },
     { name: 'Demo e Jira', file: 'test/flow/demo-jira-test.js', env: { noProject: true } },

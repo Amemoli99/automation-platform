@@ -22,5 +22,5 @@ const t = (n, c, x) => { if (!c) ko++; console.log(c ? '  ok  ' : '  KO  ', n, c
   [s, j] = await get('/api/jira/state'); t('dopo la Demo: di nuovo scollegato', j.configured === false, j);
   [s, j] = await post('/api/jira/search', { jql: 'project = DEMO' }); t('dopo la Demo: ricerca di nuovo bloccata', s === 400, [s, j]);
   console.log(ko ? 'ESITO: ' + ko + ' ko' : 'ESITO: tutto ok');
-  process.exit(ko ? 1 : 0);
+  setTimeout(() => process.exit(ko ? 1 : 0), 250); // uscita differita: chiudere subito con connessioni aperte fa crashare libuv su Windows
 })().catch((e) => { console.log('ERRORE', e.message); process.exit(2); });

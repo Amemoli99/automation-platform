@@ -1,4 +1,4 @@
-const { redact, scanStrings, describeTool } = require('../../src/server/services/redact.js');
+const { redact, scanStrings, describeTool } = require('../../src/server/areas/session/redact.js');
 let ok = 0, ko = 0;
 const t = (n, c, x) => { if (c) ok++; else { ko++; console.log('KO', n, JSON.stringify(x)); } };
 const tok = 'ghp_' + 'a'.repeat(36);

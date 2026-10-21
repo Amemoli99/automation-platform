@@ -2,23 +2,23 @@
 // Avvia `claude` in modalità stream-json e inoltra eventi al browser via SSE. Qui: avvio del server HTTP, controlli comuni e smistamento alle aree in routes/.
 const http = require('http');
 const paths = require('./infra/paths');
-const mcpenv = require('./services/mcpenv');
-const mcpclient = require('./services/mcpclient');
-const git = require('./services/git');
-const demo = require('./services/demo');
-const license = require('./services/license');
-const { openInIde } = require('./services/ide');
+const mcpenv = require('./areas/mcp').env;
+const mcpclient = require('./areas/mcp').client;
+const git = require('./areas/scm').git;
+const demo = require('./areas/demo').demo;
+const license = require('./areas/license').license;
+const { openInIde } = require('./areas/platform').ide;
 const { capFor, denyMessage } = require('./http/caps');
 const { createAuth } = require('./http/auth');
 const { serveStatic } = require('./http/static');
 const { state, saveState, needRoot } = require('./state');
-const session = require('./session');
-const workspace = require('./workspace');
-const { NOT_HANDLED } = require('./routes/common');
+const session = require('./areas/session').session;
+const demoMode = require('./areas/demo').mode;
+const { NOT_HANDLED } = require('./http/route');
 
 // Aree della API, nell'ordine in cui vengono interrogate. Ognuna espone get(ctx) e post(ctx) e risponde NOT_HANDLED per le rotte che non sono sue.
-const AREAS = [require('./routes/system'), require('./routes/run'), require('./routes/config'), require('./routes/project'), require('./routes/repos'),
-  require('./routes/git'), require('./routes/jira'), require('./routes/mcp'), require('./routes/pipelines'), require('./routes/tools')]; // require statici: il pacchetto li unisce con esbuild
+const AREAS = [require('./gateway/system'), require('./areas/session/routes'), require('./areas/project/routes'), require('./areas/scm/routes'),
+  require('./areas/jira/routes'), require('./areas/mcp/routes'), require('./areas/pipelines/routes'), require('./areas/tools/routes')].flat(); // require statici: il pacchetto li unisce con esbuild
 const MAX_BODY = Math.ceil(session.MAX_TOTAL * 1.4); // base64 + overhead JSON
 
 const PORT = Number(process.env.UI_PORT || 4173);
@@ -103,7 +103,7 @@ const server = http.createServer(async (req, res) => {
       const body = ctx.body;
       if (req.url === '/api/license/import') return json(200, { ...license.importText(String(body.text || '')), inDemo: !!state.demo });
       if (req.url === '/api/ide/open') { if (state.demo) throw new Error('Non disponibile in modalità Demo: il progetto è una simulazione.'); return json(200, openInIde(needRoot(), body.path, body.line)); }
-      if (req.url === '/api/demo') { if (body.on) workspace.demoEnter(); else workspace.demoLeave(); return json(200, { on: !!state.demo }); }
+      if (req.url === '/api/demo') { if (body.on) demoMode.demoEnter(); else demoMode.demoLeave(); return json(200, { on: !!state.demo }); }
       if (state.demo && demo.BLOCKED.has(req.url)) return json(403, { error: 'Non disponibile in modalità Demo: è una simulazione, non modifica nulla di reale.' });
       for (const area of AREAS) { if ((await area.post(ctx)) !== NOT_HANDLED) return; }
     }
