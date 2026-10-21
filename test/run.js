@@ -16,6 +16,7 @@ const TMP = path.join(ROOT, '.tmp', 'test');
 
 const argv = process.argv.slice(2);
 const what = argv.find((a) => !a.startsWith('--')) || 'all';
+const only = argv.indexOf('--only') >= 0 ? argv[argv.indexOf('--only') + 1] : null;
 const inproc = argv.includes('--inproc'); // tutto in un solo processo (NACP_INPROC=1): via di fuga, deve restare identico
 if (inproc) process.env.NACP_INPROC = '1';
 const distArg = argv.indexOf('--dist') >= 0 ? argv[argv.indexOf('--dist') + 1] : null;
@@ -114,6 +115,7 @@ const SUITES = {
     { name: 'servizi: Git con contesto, permessi e sessione in corso', file: 'test/flow/git-service-test.js', env: { stub: 'stub_allow_claude.js', role: 'tester', env: { NACP_SERVICES: 'jira,tools,pipelines,git', GIT_AUTHOR_NAME: 'Prova', GIT_AUTHOR_EMAIL: 'prova@esempio.it', GIT_COMMITTER_NAME: 'Prova', GIT_COMMITTER_EMAIL: 'prova@esempio.it' } }, needsServices: true, withRoot: true },
     { name: 'servizi: MCP (credenziali, tool, schede, domande a Claude)', file: 'test/flow/mcp-service-test.js', env: { stub: 'stub_panel_claude.js', mcp: true, env: { NACP_SERVICES: 'jira,tools,pipelines,git,mcp' } }, needsServices: true },
     { name: 'servizi: Repos (origini, clone) e aggancio nel gateway', file: 'test/flow/repos-service-test.js', env: { env: { NACP_SERVICES: 'jira,tools,pipelines,git,mcp,repos' } }, needsServices: true, withDataDir: true },
+    { name: 'servizi: Project (controlli, wizard, configurazione) con lo stato nel gateway', file: 'test/flow/project-service-test.js', env: { stub: 'stub_panel_claude.js', env: { NACP_SERVICES: 'jira,tools,pipelines,git,mcp,repos,project' } }, needsServices: true, withRootDir: true },
     { name: 'sgancio alla chiusura', file: 'test/flow/detach-test.js', env: {}, withData: true },
     { name: 'rotte del server (stato e messaggi identici al registro)', file: 'test/flow/routes-probe.js', env: { stub: 'stub_live_claude.js' }, withRoot: true },
   ],
@@ -126,11 +128,12 @@ const SUITES = {
   let bad = 0;
   for (const g of groups) for (const t of SUITES[g]) {
     if (inproc && t.needsServices) continue;
+    if (only && !(t.name + ' ' + t.file).includes(only)) continue; // --only <testo>: solo gli scenari che lo contengono
     console.log('\n=== ' + t.name + (distArg ? ' [pacchetto]' : ''));
     if (t.unit) { if (await runNode(path.join(ROOT, t.file), [], {})) bad++; continue; }
     let env;
     try { env = await startEnv(path.basename(t.file, '.js'), t.env); } catch (e) { console.log('  KO  ' + e.message); bad++; continue; }
-    const extra = t.withDir ? [env.dir] : t.withRoot ? [env.root] : t.withToken ? ['token-di-prova-1234567890'] : t.withData ? [env.data, env.root] : t.withDataDir ? [env.data, env.dir] : t.withLog ? [env.root, env.stubLog] : t.args || [];
+    const extra = t.withDir ? [env.dir] : t.withRoot ? [env.root] : t.withToken ? ['token-di-prova-1234567890'] : t.withData ? [env.data, env.root] : t.withDataDir ? [env.data, env.dir] : t.withRootDir ? [env.root, env.dir] : t.withLog ? [env.root, env.stubLog] : t.args || [];
     if (argv.includes('--record')) extra.push('--record'); // rigenera il registro delle rotte
     try { if (await runNode(path.join(ROOT, t.file), [env.base, ...extra], {})) bad++; } finally { env.stop(); }
   }

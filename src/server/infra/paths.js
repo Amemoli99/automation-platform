@@ -7,8 +7,10 @@ const os = require('os');
 const path = require('path');
 
 const IN_SOURCE = path.basename(__dirname) === 'infra';
-const SERVER_DIR = IN_SOURCE ? path.resolve(__dirname, '..') : __dirname;
-const KIT_DIR = IN_SOURCE ? path.resolve(SERVER_DIR, '..', '..') : path.resolve(__dirname, '..'); // radice dello strumento (non un progetto dell'utente)
+// Nel pacchetto il gateway è ui/server.js e ogni servizio è ui/services/<nome>.js (bundle separati): per tutti la cartella "ui" è quella dei dati e delle pagine.
+const PKG_UI = path.basename(__dirname) === 'services' ? path.resolve(__dirname, '..') : __dirname;
+const SERVER_DIR = IN_SOURCE ? path.resolve(__dirname, '..') : PKG_UI;
+const KIT_DIR = IN_SOURCE ? path.resolve(SERVER_DIR, '..', '..') : path.resolve(PKG_UI, '..'); // radice dello strumento (non un progetto dell'utente)
 const ASSETS_DIR = IN_SOURCE ? path.join(SERVER_DIR, 'assets') : SERVER_DIR; // catalog.json, skill-steps.json, version.json, templates/
 const WEB_DIR = IN_SOURCE ? path.join(KIT_DIR, 'src', 'web') : path.join(SERVER_DIR, 'public'); // pagine servite al browser
 const SIM_FILE = IN_SOURCE ? path.join(SERVER_DIR, 'areas', 'demo', 'sim.js') : path.join(SERVER_DIR, 'demo', 'sim.js'); // simulatore della modalità Demo (processo a parte)

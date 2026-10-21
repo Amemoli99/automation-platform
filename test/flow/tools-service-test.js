@@ -23,7 +23,7 @@ const waitFor = async (fn, ms = 12000) => { const t0 = Date.now(); while (Date.n
   t('vede il progetto agganciato dal gateway (project: true)', j.project === true && !!j.mcp && Array.isArray(j.skills || []), Object.keys(j));
   const withProject = JSON.stringify(Object.keys(j).sort());
   [s, j, via] = await get('/api/tools/catalog');
-  t('catalogo dal servizio', s === 200 && via === 'tools', [s, via]);
+  t('catalogo dal servizio, con le sue risorse (server MCP noti e skill/agent del kit non vuoti)', s === 200 && via === 'tools' && Array.isArray(j.mcp) && j.mcp.length > 0 && Array.isArray(j.kit) && j.kit.length > 0, [s, via, j && Object.keys(j), j && j.mcp && j.mcp.length, j && j.kit && j.kit.length]);
   [s, j, via] = await get('/api/tools/mcp-status');
   t('stato dei server MCP dal servizio', s === 200 && via === 'tools' && Array.isArray(j.items), [s, via]);
 

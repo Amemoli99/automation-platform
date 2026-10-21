@@ -47,7 +47,8 @@ for (const [entry, out] of [[path.join('src', 'server', 'main.js'), path.join('u
   [path.join('src', 'server', 'service-entries', 'pipelines.js'), path.join('ui', 'services', 'pipelines.js')],
   [path.join('src', 'server', 'service-entries', 'git.js'), path.join('ui', 'services', 'git.js')],
   [path.join('src', 'server', 'service-entries', 'mcp.js'), path.join('ui', 'services', 'mcp.js')],
-  [path.join('src', 'server', 'service-entries', 'repos.js'), path.join('ui', 'services', 'repos.js')]]) { // un file per processo: gateway, simulatore Demo, servizi
+  [path.join('src', 'server', 'service-entries', 'repos.js'), path.join('ui', 'services', 'repos.js')],
+  [path.join('src', 'server', 'service-entries', 'project.js'), path.join('ui', 'services', 'project.js')]]) { // un file per processo: gateway, simulatore Demo, servizi
   const bundled = esbuild.buildSync({
     entryPoints: [path.join(SRC, entry)], bundle: true, platform: 'node', format: 'cjs', target: 'node18',
     minify: true, legalComments: 'none', write: false, logLevel: 'warning',

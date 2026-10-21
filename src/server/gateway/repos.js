@@ -1,6 +1,7 @@
 // Clone di un repository e aggancio del progetto: la parte "clona" è dell'area scm (può girare come servizio),
 // l'aggancio cambia lo stato dell'app, quindi lo fa il gateway.
-const { activate, projectInfo } = require('../areas/project');
+const { activate } = require('../areas/project');
+const { projectInfo } = require('./project');
 const reposRoutes = require('../areas/scm/repos-routes');
 const { NOT_HANDLED } = require('../http/route');
 

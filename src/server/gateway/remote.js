@@ -1,6 +1,6 @@
 // Aree che girano come servizi separati (processi figli su pipe con nome). Il gateway controlla accesso e permessi come sempre,
 // poi inoltra le richieste di quelle aree al loro servizio. Se un servizio non parte, l'area resta in-process: l'app non si ferma.
-//   NACP_SERVICES=jira,...   aree da avviare come servizi (default: jira, tools, pipelines, git, mcp, repos); vuoto oppure NACP_INPROC=1 = tutto in un processo.
+//   NACP_SERVICES=jira,...   aree da avviare come servizi (default: jira, tools, pipelines, git, mcp, repos, project); vuoto oppure NACP_INPROC=1 = tutto in un processo.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -9,20 +9,31 @@ const ipc = require('../infra/ipc');
 const { createSupervisor } = require('../supervisor');
 const { state } = require('../state');
 
-// area -> prefissi di rotta serviti dal servizio. Un servizio per area (stesso nome).
+// servizio -> rotte che gli spettano, come "METODO percorso" (METODO può essere *; un percorso che finisce con * è un prefisso).
+// Le rotte che cambiano lo stato dell'app restano nel gateway (gateway/*.js) e non compaiono qui.
 const TABLE = {
-  jira: ['/api/jira/'],
-  tools: ['/api/tools'],
-  pipelines: ['/api/pipelines'],
-  git: ['/api/git/'],
-  mcp: ['/api/mcp/'],
-  repos: ['/api/repos/sources', '/api/repos/list'], // il clone passa dal gateway (gateway/repos.js): cambia il progetto agganciato
+  jira: ['* /api/jira/*'],
+  tools: ['* /api/tools*'],
+  pipelines: ['* /api/pipelines*'],
+  git: ['* /api/git/*'],
+  mcp: ['* /api/mcp/*'],
+  repos: ['* /api/repos/sources*', '* /api/repos/list*'], // il clone passa dal gateway (gateway/repos.js): cambia il progetto agganciato
+  project: [
+    'GET /api/project/inspect', 'GET /api/project/pipeline', 'GET /api/config', 'GET /api/claude/auth', 'GET /api/claude/login',
+    'POST /api/project/prepare', 'POST /api/tests/existing', 'POST /api/pipeline/preview', 'POST /api/project/pick-folder', 'POST /api/project/plan',
+    'POST /api/project/verify', 'POST /api/m2/token', 'POST /api/config/permissions', 'POST /api/config/profile', 'POST /api/claude/login', 'POST /api/claude/login/cancel',
+  ],
 };
+const matches = (patterns, method, url) => patterns.some((pat) => {
+  const i = pat.indexOf(' ');
+  const m = pat.slice(0, i), path = pat.slice(i + 1);
+  return (m === '*' || m === method) && (path.endsWith('*') ? url.startsWith(path.slice(0, -1)) : url === path);
+});
 
 function enabledNames() {
   if (process.env.NACP_INPROC === '1') return [];
   const raw = process.env.NACP_SERVICES;
-  const list = raw === undefined ? ['jira', 'tools', 'pipelines', 'git', 'mcp', 'repos'] : raw.split(',').map((s) => s.trim()).filter(Boolean);
+  const list = raw === undefined ? ['jira', 'tools', 'pipelines', 'git', 'mcp', 'repos', 'project'] : raw.split(',').map((s) => s.trim()).filter(Boolean);
   return list.filter((n) => TABLE[n]);
 }
 
@@ -60,9 +71,9 @@ function create({ log = () => {} } = {}) {
     return Object.assign(new Error((j && j.error) || fallback), { status: r.status, ...(j && j.code === 'role' ? { denied: true } : {}) });
   }
   const has = (name) => live.has(name);
-  const serviceFor = (url) => {
+  const serviceFor = (method, url) => {
     const p = String(url).split('?')[0];
-    for (const n of live) if (TABLE[n].some((pre) => p.startsWith(pre))) return n;
+    for (const n of live) if (matches(TABLE[n], method, p)) return n;
     return null;
   };
   const forward = (name, req, res, context) => sup.forward(name, req, res, context);

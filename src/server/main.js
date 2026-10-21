@@ -18,7 +18,7 @@ const { NOT_HANDLED } = require('./http/route');
 const remote = require('./gateway/remote').create({ log: (e) => { if (e.type === 'crash' || e.type === 'failed' || e.type === 'fallback' || e.type === 'skip') console.warn('[servizi]', JSON.stringify(e)); } });
 
 // Aree della API, nell'ordine in cui vengono interrogate. Ognuna espone get(ctx) e post(ctx) e risponde NOT_HANDLED per le rotte che non sono sue.
-const AREAS = [require('./gateway/system'), require('./gateway/repos'), require('./areas/session/routes'), require('./areas/project/routes'), require('./areas/scm/routes'),
+const AREAS = [require('./gateway/system'), require('./gateway/repos'), require('./gateway/project'), require('./areas/session/routes'), require('./areas/project/routes'), require('./areas/scm/routes'),
   require('./areas/jira/routes'), require('./areas/mcp/routes'), require('./areas/pipelines/routes'), require('./areas/tools/routes')].flat(); // require statici: il pacchetto li unisce con esbuild
 const MAX_BODY = Math.ceil(session.MAX_TOTAL * 1.4); // base64 + overhead JSON
 
@@ -91,7 +91,7 @@ const server = http.createServer(async (req, res) => {
 
   // contesto della richiesta: ciò che le aree (anche quelle in un altro processo) devono sapere dello stato, senza leggerlo
   const lic = license.current();
-  const context = { root: state.root, prefs: state.root ? prefsFor(state.root) : {}, demo: !!state.demo, running: state.running, caps: lic.caps, role: lic.role, roleLabel: lic.roleLabel };
+  const context = { root: state.root, prefs: state.root ? prefsFor(state.root) : {}, allPrefs: state.prefs, demo: !!state.demo, running: state.running, caps: lic.caps, role: lic.role, roleLabel: lic.roleLabel };
   const ctx = { req, res, json, body: null, shutdown, remote, context };
   try {
     const need = capFor(req.method, req.url);
@@ -100,7 +100,7 @@ const server = http.createServer(async (req, res) => {
       if (!license.allows(st, need, !!state.demo)) return json(403, { error: denyMessage(st, need), code: 'role', role: st.role, need });
     }
     // Aree che girano come servizi separati: accesso e permessi sono già stati controllati qui, la richiesta passa com'è alla pipe del servizio.
-    const svcName = remote.serviceFor(req.url);
+    const svcName = remote.serviceFor(req.method, req.url);
     if (svcName && (req.method === 'GET' || req.method === 'POST')) {
       if (req.method === 'POST') {
         if (!(req.headers['content-type'] || '').includes('application/json')) return json(415, { error: 'JSON richiesto' });

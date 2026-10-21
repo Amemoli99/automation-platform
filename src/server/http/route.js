@@ -14,4 +14,7 @@ const requireCap = (ctx, cap, what) => {
   if (!ok) throw Object.assign(new Error('Il tuo profilo (' + (c.roleLabel || 'sconosciuto') + ') non consente ' + what + '.'), { denied: true });
 };
 
-module.exports = { NOT_HANDLED, needRoot, requireCap };
+// Preferenze di una cartella qualsiasi (es. il wizard lavora su un progetto non ancora agganciato).
+const prefsOf = (ctx, dir) => ((ctx.context && ctx.context.allPrefs) || {})[String(dir || '').toLowerCase()] || {};
+
+module.exports = { NOT_HANDLED, needRoot, requireCap, prefsOf };
