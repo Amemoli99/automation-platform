@@ -96,6 +96,7 @@ const SUITES = {
   flow: [
     { name: 'diretta: finestre, mascheramento, output', file: 'test/flow/live-test.js', env: { stub: 'stub_live_claude.js', secretEnv: true } },
     { name: 'Demo e Jira', file: 'test/flow/demo-jira-test.js', env: { noProject: true } },
+    { name: 'pagine e risorse della UI', file: 'test/flow/web-test.js', env: { noProject: true } },
     { name: 'accesso protetto (token, cookie, Origin, Host)', file: 'test/flow/auth-test.js', env: { auth: true, noProject: true }, withToken: true },
     { name: 'permessi concessi e domande a margine', file: 'test/flow/allow-test.js', env: { stub: 'stub_allow_claude.js' }, withLog: true },
     { name: 'sgancio alla chiusura', file: 'test/flow/detach-test.js', env: {}, withData: true },

@@ -107,12 +107,14 @@ src/server/services/      logica di dominio senza HTTP: projects, pipelines, jir
 src/server/infra/         paths.js (cartelle e dati), claude.js (unico punto che lancia claude), proc.js (kill dell'albero)
 src/server/assets/        catalog.json, skill-steps.json, version.json, templates/
 src/server/demo/sim.js    simulatore della modalità Demo (processo a parte)
-src/web/                  pagine e script serviti al browser
+src/web/                  index.html (solo markup) + css/app.css + js/*.js (uno per scheda, caricati in ordine; boot.js per ultimo), pipelines.html, mcp.html
 launcher/                 Launcher.cs e build-exe.ps1 (eseguibile)
 kit/                      skill e agent forniti ai progetti
 build/                    build-dist.js (pacchetto offuscato), zip.py
 test/                     unit, flow, smoke, fixtures (finti Jira, MCP e claude)
 tools/license.js          strumento di chi emette le licenze (la chiave privata non sta nel repository)
 ```
+
+Gli script della pagina sono script classici che condividono lo stesso ambito globale: in un solo file le funzioni sono disponibili fin dall'inizio, con più file un'istruzione eseguita al caricamento può usare solo ciò che è già stato caricato. Per questo le istruzioni di avvio stanno in `js/boot.js`, l'ultimo script.
 
 Regole: le rotte non contengono logica di dominio (stanno in `services/`); chi lancia `claude` usa `infra/claude.js`; percorsi e dati utente passano solo da `infra/paths.js`; un test (`test/unit/caps-test.js`) blocca ogni cambiamento involontario dei permessi per rotta e `test/flow/routes-golden.json` registra stato e messaggi delle rotte.
