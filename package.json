@@ -4,7 +4,7 @@
   "private": true,
   "description": "Nexsoft Automation Cockpit Platform (NACP). Il prodotto gira solo con Node: le dipendenze qui sotto servono per costruire il pacchetto, non per eseguirlo.",
   "scripts": {
-    "start": "node ui/server.js",
+    "start": "node src/server/main.js",
     "test": "node test/run.js all",
     "test:unit": "node test/run.js unit",
     "test:flow": "node test/run.js flow",

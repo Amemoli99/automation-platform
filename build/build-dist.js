@@ -13,8 +13,9 @@ const OUT = path.resolve(process.argv[3] || path.join(ROOT, '.tmp', 'dist'));
 const NAME = process.argv[4] || 'NexsoftAutomationCockpit'; // nome della cartella nello zip e dell'eseguibile
 const PKG = path.join(OUT, NAME);
 
-function copy(rel) {
-  const from = path.join(SRC, rel), to = path.join(PKG, rel);
+// Dal repository al pacchetto: i sorgenti stanno in src/ e launcher/, il pacchetto mantiene il layout ui/ che l'eseguibile si aspetta.
+function copy(rel, dest = rel) {
+  const from = path.join(SRC, rel), to = path.join(PKG, dest);
   if (!fs.existsSync(from)) { console.log('  (non presente, saltato)', rel); return; }
   fs.mkdirSync(path.dirname(to), { recursive: true });
   fs.cpSync(from, to, { recursive: true });
@@ -24,9 +25,11 @@ fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(PKG, { recursive: true });
 
 // 1) file che restano com'erano (eseguibile, documentazione, kit, interfaccia nel browser, dati letti a runtime)
-for (const rel of [NAME + '.exe', 'README.md', 'kit', path.join('ui', 'public'), path.join('ui', 'templates'),
-  path.join('ui', 'catalog.json'), path.join('ui', 'skill-steps.json'), path.join('ui', 'version.json'), path.join('ui', '.gitignore'),
-  path.join('ui', 'Launcher.cs'), path.join('ui', 'build-exe.ps1')]) copy(rel);
+const ASSETS = path.join('src', 'server', 'assets');
+for (const rel of [NAME + '.exe', 'README.md', 'kit']) copy(rel);
+copy(path.join('ui', 'public'), path.join('ui', 'public'));
+for (const f of ['templates', 'catalog.json', 'skill-steps.json', 'version.json', '.gitignore']) copy(path.join(ASSETS, f), path.join('ui', f));
+for (const f of ['Launcher.cs', 'build-exe.ps1']) copy(path.join('ui', f), path.join('ui', f));
 
 // 2) backend: un solo file per il server e uno per il simulatore della modalità Demo (è lanciato come processo a parte)
 const OBF = {
@@ -38,7 +41,7 @@ const OBF = {
   numbersToExpressions: true, simplify: true, selfDefending: false, debugProtection: false, disableConsoleOutput: false, unicodeEscapeSequence: false,
 };
 const stats = [];
-for (const [entry, out] of [[path.join('ui', 'server.js'), path.join('ui', 'server.js')], [path.join('ui', 'demo', 'sim.js'), path.join('ui', 'demo', 'sim.js')]]) {
+for (const [entry, out] of [[path.join('src', 'server', 'main.js'), path.join('ui', 'server.js')], [path.join('src', 'server', 'demo', 'sim.js'), path.join('ui', 'demo', 'sim.js')]]) {
   const bundled = esbuild.buildSync({
     entryPoints: [path.join(SRC, entry)], bundle: true, platform: 'node', format: 'cjs', target: 'node18',
     minify: true, legalComments: 'none', write: false, logLevel: 'warning',

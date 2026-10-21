@@ -5,8 +5,8 @@ const os = require('os');
 const path = require('path');
 const { exec } = require('child_process');
 const jdks = require('./jdks');
-const { claudeBin, spawnClaude } = require('./infra/claude');
-const { killTree } = require('./infra/proc');
+const { claudeBin, spawnClaude } = require('../infra/claude');
+const { killTree } = require('../infra/proc');
 
 const settingsFile = (root) => path.join(root, '.claude', 'settings.json');
 const localFile = (root) => path.join(root, '.claude', 'settings.local.json');

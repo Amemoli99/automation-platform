@@ -10,14 +10,14 @@ const net = require('net');
 const { spawn } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
-const lic = require(path.join(ROOT, 'ui', 'license'));
+const lic = require(path.join(ROOT, 'src', 'server', 'services', 'license'));
 const FIX = path.join(__dirname, 'fixtures');
 const TMP = path.join(ROOT, '.tmp', 'test');
 
 const argv = process.argv.slice(2);
 const what = argv.find((a) => !a.startsWith('--')) || 'all';
 const distArg = argv.indexOf('--dist') >= 0 ? argv[argv.indexOf('--dist') + 1] : null;
-const ENTRY = distArg ? path.join(path.resolve(distArg), 'ui', 'server.js') : path.join(ROOT, 'ui', 'server.js');
+const ENTRY = distArg ? path.join(path.resolve(distArg), 'ui', 'server.js') : path.join(ROOT, 'src', 'server', 'main.js');
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const fwd = (p) => p.replace(/\\/g, '/');

@@ -10,7 +10,7 @@ const pipelines = require('./pipelines');
 const SERVER_RE = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/;
 const PATH_RE = /^[A-Za-z0-9_.\-]{0,80}$/; // percorso con punti (es. "result.items"), indici numerici ammessi
 const RESULT_TYPES = ['table', 'list', 'text', 'json'];
-const { dataDir } = require('./infra/paths');
+const { dataDir } = require('../infra/paths');
 const dirOf = () => path.join(dataDir(), 'mcp-panels');
 const fileOf = (server) => { if (!SERVER_RE.test(String(server || ''))) throw new Error('Nome del server non valido.'); return path.join(dirOf(), server + '.json'); };
 

@@ -9,11 +9,11 @@ const path = require('path');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
 const mcpclient = require('./mcpclient');
-const { spawnClaude } = require('./infra/claude');
-const { killTree } = require('./infra/proc');
+const { spawnClaude } = require('../infra/claude');
+const { killTree } = require('../infra/proc');
 
 const SERVER_RE = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/;
-const { dataDir } = require('./infra/paths');
+const { dataDir } = require('../infra/paths');
 const flagsFile = () => path.join(dataDir(), 'mcp-readonly.json');
 
 /* ---------- livello di autonomia per server (scelto dall'utente: il Cockpit non può verificare cosa fa davvero un server) ----------

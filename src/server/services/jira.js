@@ -16,7 +16,7 @@ const FIELDS = ['summary', 'status', 'issuetype', 'priority', 'assignee', 'updat
 const MAX_QUERIES = 50;
 
 /* ---------- archivio locale ---------- */
-const { dataDir } = require('./infra/paths');
+const { dataDir } = require('../infra/paths');
 const storeFile = () => path.join(dataDir(), 'jira.json');
 
 function readStore() {

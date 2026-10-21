@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 const mcpenv = require('./mcpenv');
-const { killTree } = require('./infra/proc');
+const { killTree } = require('../infra/proc');
 
 const PROTOCOL = '2025-06-18';
 const IDLE_MS = 5 * 60 * 1000;

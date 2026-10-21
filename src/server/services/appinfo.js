@@ -7,7 +7,8 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 
-const UI = require('./infra/paths').UI_DIR;
+const paths = require('../infra/paths');
+const UI = paths.APP_DIR;
 const EXT = /\.(js|json|html|css|cs|ps1|md|webp|png|svg)$/i;
 let cached = null;
 
@@ -23,7 +24,7 @@ function walk(dir, out) {
 function info() {
   if (cached) return cached;
   let ver = {};
-  try { ver = JSON.parse(fs.readFileSync(path.join(UI, 'version.json'), 'utf8')); } catch { /* senza version.json: 0.0.0 */ }
+  try { ver = JSON.parse(fs.readFileSync(paths.asset('version.json'), 'utf8')); } catch { /* senza version.json: 0.0.0 */ }
   const files = [];
   try { walk(UI, files); } catch { /* cartella non leggibile: build vuota */ }
   files.sort();

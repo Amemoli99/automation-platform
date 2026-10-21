@@ -94,7 +94,7 @@ function verifyText(text, { pubPem, now = Date.now(), machine = machineCode() } 
 }
 
 /* ---------- stato corrente ---------- */
-const { dataDir } = require('./infra/paths');
+const { dataDir } = require('../infra/paths');
 const licenseFile = () => path.join(dataDir(), 'license.json');
 const seenFile = () => path.join(dataDir(), 'license-seen.json');
 
