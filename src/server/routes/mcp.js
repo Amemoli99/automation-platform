@@ -1,6 +1,7 @@
 // Rotte dei server MCP del progetto: credenziali, tool, chiamate, schede, domande a Claude.
 const path = require('path');
 const mcpenv = require('../services/mcpenv');
+const jdks = require('../services/jdks');
 const mcpclient = require('../services/mcpclient');
 const mcppanels = require('../services/mcppanels');
 const mcpask = require('../services/mcpask');
