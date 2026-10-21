@@ -88,7 +88,7 @@ async function startEnv(name, opt = {}) {
     if (s !== 200) { stop(); throw new Error('Jira di prova non configurato: ' + JSON.stringify(j).slice(0, 200)); }
     [s, j] = await api(base, 'POST', '/api/jira/unlink', {});
   }
-  return { base, dir: parent, stop, log: () => log };
+  return { base, dir: parent, root: path.join(proj, 'p'), stop, log: () => log };
 }
 
 const SUITES = {
@@ -96,6 +96,7 @@ const SUITES = {
   flow: [
     { name: 'diretta: finestre, mascheramento, output', file: 'test/flow/live-test.js', env: { stub: 'stub_live_claude.js', secretEnv: true } },
     { name: 'Demo e Jira', file: 'test/flow/demo-jira-test.js', env: { noProject: true } },
+    { name: 'rotte del server (stato e messaggi identici al registro)', file: 'test/flow/routes-probe.js', env: { stub: 'stub_live_claude.js' }, withRoot: true },
   ],
   smoke: [{ name: 'prova di fumo (pagine, Jira, MCP, editor, wizard, Demo)', file: 'test/smoke/smoke-test.js', env: { stub: 'stub_panel_claude.js', jira: true, mcp: true }, withDir: true }],
 };
@@ -109,7 +110,9 @@ const SUITES = {
     if (t.unit) { if (await runNode(path.join(ROOT, t.file), [], {})) bad++; continue; }
     let env;
     try { env = await startEnv(path.basename(t.file, '.js'), t.env); } catch (e) { console.log('  KO  ' + e.message); bad++; continue; }
-    try { if (await runNode(path.join(ROOT, t.file), t.withDir ? [env.base, env.dir] : [env.base], {})) bad++; } finally { env.stop(); }
+    const extra = t.withDir ? [env.dir] : t.withRoot ? [env.root] : [];
+    if (argv.includes('--record')) extra.push('--record'); // rigenera il registro delle rotte
+    try { if (await runNode(path.join(ROOT, t.file), [env.base, ...extra], {})) bad++; } finally { env.stop(); }
   }
   console.log('\n' + (bad ? 'ESITO: ' + bad + ' scenari con errori' : 'ESITO: tutti i test passati'));
   process.exit(bad ? 1 : 0);
