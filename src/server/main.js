@@ -18,7 +18,7 @@ const { NOT_HANDLED } = require('./http/route');
 const remote = require('./gateway/remote').create({ log: (e) => { if (e.type === 'crash' || e.type === 'failed' || e.type === 'fallback' || e.type === 'skip') console.warn('[servizi]', JSON.stringify(e)); } });
 
 // Aree della API, nell'ordine in cui vengono interrogate. Ognuna espone get(ctx) e post(ctx) e risponde NOT_HANDLED per le rotte che non sono sue.
-const AREAS = [require('./gateway/system'), require('./areas/session/routes'), require('./areas/project/routes'), require('./areas/scm/routes'),
+const AREAS = [require('./gateway/system'), require('./gateway/repos'), require('./areas/session/routes'), require('./areas/project/routes'), require('./areas/scm/routes'),
   require('./areas/jira/routes'), require('./areas/mcp/routes'), require('./areas/pipelines/routes'), require('./areas/tools/routes')].flat(); // require statici: il pacchetto li unisce con esbuild
 const MAX_BODY = Math.ceil(session.MAX_TOTAL * 1.4); // base64 + overhead JSON
 

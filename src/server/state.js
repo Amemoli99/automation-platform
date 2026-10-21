@@ -22,21 +22,25 @@ const state = {
   // Progetto attivo: la cartella in cui gira `claude` e di cui si leggono permessi e profilo. null = nessun progetto agganciato: va scelto dalla scheda Progetto.
   root: isDir(savedState.root) ? savedState.root : null,
   recent: (Array.isArray(savedState.recent) ? savedState.recent : []).filter(isDir).slice(0, 8), // progetti agganciati di recente
-  // Origini Git configurate (GitHub/GitLab), come salvate: le normalizza chi le usa (routes/repos.js).
-  sources: Array.isArray(savedState.sources) ? savedState.sources : [],
   // Scelta della skill (e dei suoi argomenti) per progetto: { "<percorso>": { skill, args } }
   prefs: savedState.prefs && typeof savedState.prefs === 'object' ? savedState.prefs : {},
   // Repository Maven del framework di test: lo indica l'utente al primo progetto e l'app lo ricorda (UI_FRAMEWORK_REPO per forzarlo).
   frameworkRepo: process.env.UI_FRAMEWORK_REPO || (typeof savedState.frameworkRepo === 'string' ? savedState.frameworkRepo : ''),
   demo: null, // modalità Demo attiva: { prevRoot, base, restore }
-  linked: new Set(), // chiavi delle origini collegate (solo in memoria: a ogni avvio si riparte vuoti)
   workspace: WORKSPACE,
   running: false, // la sessione di claude è in corso (la imposta session.js)
   events: new EventEmitter(), // 'reset': progetto o modalità Demo cambiati, la sessione riparte da zero (session.js ascolta)
 };
 
 const prefsFor = (dir) => (dir && state.prefs[String(dir).toLowerCase()]) || {};
-const saveState = () => fs.mkdirSync(path.dirname(STATE_FILE), { recursive: true }) || fs.writeFileSync(STATE_FILE, JSON.stringify({ root: state.demo ? state.demo.prevRoot : state.root, recent: state.recent, sources: state.sources, prefs: state.prefs, frameworkRepo: state.frameworkRepo }));
+// Si riscrive il file conservando le chiavi che questo modulo non gestisce (es. le origini Git delle versioni precedenti, che l'area scm migra al primo uso):
+// altrimenti salvare lo stato prima della migrazione le cancellerebbe.
+const saveState = () => {
+  let prev = {};
+  try { prev = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')) || {}; } catch { /* primo salvataggio */ }
+  fs.mkdirSync(path.dirname(STATE_FILE), { recursive: true });
+  fs.writeFileSync(STATE_FILE, JSON.stringify({ ...prev, root: state.demo ? state.demo.prevRoot : state.root, recent: state.recent, prefs: state.prefs, frameworkRepo: state.frameworkRepo }));
+};
 const needRoot = () => {
   if (!state.root) throw new Error('Nessun progetto agganciato: scegline uno dalla scheda Progetto.');
   return state.root;

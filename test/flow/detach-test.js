@@ -14,12 +14,14 @@ const same = (a, b) => path.resolve(a || '').toLowerCase() === path.resolve(b).t
   let r = await (await fetch(base + '/api/project', { headers: h })).json();
   t('progetto agganciato prima della chiusura', r.attached === true && same(r.root, proj), r);
   t('lo stato su disco ha il progetto attivo', same(state().root, proj), state());
+  const src = await (await fetch(base + '/api/repos/sources', { headers: h })).json();
+  t('prima della chiusura le 2 origini del vecchio stato sono leggibili', src.savedList.length === 2, src);
   await fetch(base + '/api/shutdown', { method: 'POST', headers: h, body: '{}' });
   await new Promise((res) => setTimeout(res, 2500));
   const s = state();
   t('dopo la chiusura il progetto è sganciato', !s.root, s);
   t('e resta tra i recenti', (s.recent || []).some((d) => same(d, proj)), s.recent);
-  t('le origini salvate non si perdono', Array.isArray(s.sources) && s.sources.length === 2, s.sources);
+  t('le origini del vecchio stato non vengono cancellate dal salvataggio dello stato', Array.isArray(s.sources) && s.sources.length === 2, s.sources);
   let down = false; try { await fetch(base + '/api/version', { headers: h }); } catch { down = true; }
   t('il server si è fermato', down);
   console.log('RISULTATO: ' + ok + ' ok, ' + ko + ' ko');

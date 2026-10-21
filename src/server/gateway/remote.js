@@ -1,6 +1,6 @@
 // Aree che girano come servizi separati (processi figli su pipe con nome). Il gateway controlla accesso e permessi come sempre,
 // poi inoltra le richieste di quelle aree al loro servizio. Se un servizio non parte, l'area resta in-process: l'app non si ferma.
-//   NACP_SERVICES=jira,...   aree da avviare come servizi (default: jira, tools, pipelines, git, mcp); vuoto oppure NACP_INPROC=1 = tutto in un processo.
+//   NACP_SERVICES=jira,...   aree da avviare come servizi (default: jira, tools, pipelines, git, mcp, repos); vuoto oppure NACP_INPROC=1 = tutto in un processo.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -16,12 +16,13 @@ const TABLE = {
   pipelines: ['/api/pipelines'],
   git: ['/api/git/'],
   mcp: ['/api/mcp/'],
+  repos: ['/api/repos/sources', '/api/repos/list'], // il clone passa dal gateway (gateway/repos.js): cambia il progetto agganciato
 };
 
 function enabledNames() {
   if (process.env.NACP_INPROC === '1') return [];
   const raw = process.env.NACP_SERVICES;
-  const list = raw === undefined ? ['jira', 'tools', 'pipelines', 'git', 'mcp'] : raw.split(',').map((s) => s.trim()).filter(Boolean);
+  const list = raw === undefined ? ['jira', 'tools', 'pipelines', 'git', 'mcp', 'repos'] : raw.split(',').map((s) => s.trim()).filter(Boolean);
   return list.filter((n) => TABLE[n]);
 }
 
@@ -53,6 +54,11 @@ function create({ log = () => {} } = {}) {
     }
   }
 
+  // Errore del servizio come l'avrebbe lanciato il codice locale: stesso messaggio, e lo stesso segno di permesso negato.
+  function failure(r, fallback) {
+    let j = null; try { j = JSON.parse(r.body.toString('utf8')); } catch { /* non JSON */ }
+    return Object.assign(new Error((j && j.error) || fallback), { status: r.status, ...(j && j.code === 'role' ? { denied: true } : {}) });
+  }
   const has = (name) => live.has(name);
   const serviceFor = (url) => {
     const p = String(url).split('?')[0];
@@ -65,7 +71,7 @@ function create({ log = () => {} } = {}) {
   async function control(name, op, body) {
     const r = await sup.call(name, { method: 'POST', url: '/_nacp/control/' + op, body: body || {}, waitMs: 8000 });
     if (r.status === 404 && /Controllo sconosciuto/.test(r.body.toString('utf8'))) return { ok: true, ignored: true }; // il servizio non ha questo controllo: non lo riguarda
-    if (r.status !== 200) throw new Error('Il servizio "' + name + '" ha rifiutato "' + op + '": ' + r.body.toString('utf8').slice(0, 200));
+    if (r.status !== 200) throw failure(r, 'Il servizio "' + name + '" ha rifiutato "' + op + '"');
     return JSON.parse(r.body.toString('utf8'));
   }
   const broadcast = (op, body) => Promise.all([...live].map((n) => control(n, op, body)));
@@ -73,7 +79,7 @@ function create({ log = () => {} } = {}) {
   async function callOr(name, opts, local, context) {
     if (!has(name)) return local();
     const r = await call(name, { ...opts, headers: { ...(opts.headers || {}), [ipc.CONTEXT_HEADER]: ipc.encodeContext(context) } });
-    if (r.status !== 200) throw new Error('Servizio "' + name + '": ' + r.status);
+    if (r.status !== 200) throw failure(r, 'Servizio "' + name + '": ' + r.status);
     return JSON.parse(r.body.toString('utf8'));
   }
   const status = () => (sup ? sup.status() : {});
