@@ -1,0 +1,20 @@
+{
+  "name": "automation-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Nexsoft Automation Cockpit Platform (NACP). Il prodotto gira solo con Node: le dipendenze qui sotto servono per costruire il pacchetto, non per eseguirlo.",
+  "scripts": {
+    "start": "node ui/server.js",
+    "test": "node test/run.js all",
+    "test:unit": "node test/run.js unit",
+    "test:flow": "node test/run.js flow",
+    "test:smoke": "node test/run.js smoke",
+    "dist": "node build/build-dist.js",
+    "dist:zip": "node build/build-dist.js && python build/zip.py",
+    "test:dist": "node test/run.js smoke --dist"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "javascript-obfuscator": "5.8.0"
+  }
+}

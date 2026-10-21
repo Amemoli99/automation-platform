@@ -80,3 +80,17 @@ I permessi sono applicati dal server a ogni richiesta (una funzione nuova nasce 
 - **Server MCP:** dopo l'aggiunta di un server la UI propone di configurarlo. Nella scheda **Credenziali e scheda…** imposti le variabili richieste (cifrate con DPAPI, mai nel repository né nel `.mcp.json`) e puoi creare una **scheda** per usare i suoi tool dalla UI, scritta da Claude (una richiesta a Sonnet) o semplice. La scheda è un file di dati, non codice. I tool che possono modificare dati chiedono sempre conferma. Sono gestiti solo i server locali (stdio).
 - **Editor pipeline:** da Progetto → **Modifica pipeline e agent…** si modificano skill e agent del progetto (controlli secondo le convenzioni di Claude Code, copia di sicurezza in `.tmp\pipeline-backup\`), se ne creano di nuovi anche con la bozza di Claude, si collega un agent a una skill con proposta da approvare e si definiscono gli step mostrati nell'avanzamento (salvati nel progetto, in `.claude\pipeline-steps.json`).
 - Per ricompilare l'eseguibile (`NexsoftAutomationCockpit.exe`): `powershell -File ui\build-exe.ps1`.
+
+## Sviluppo
+
+Il prodotto gira solo con Node (nessuna dipendenza a runtime). `npm install` serve solo per costruire il pacchetto (esbuild e javascript-obfuscator).
+
+| Comando | Cosa fa |
+|---|---|
+| `npm start` | avvia il server dai sorgenti |
+| `npm test` | unit (mascheramento segreti), flow (finestre in diretta, Demo/Jira), prova di fumo |
+| `npm run dist` | costruisce `.tmp/dist/NexsoftAutomationCockpit` (backend unito e offuscato) |
+| `npm run dist:zip` | come sopra e crea `.tmp/NexsoftAutomationCockpit.zip` (serve Python) |
+| `npm run test:dist -- .tmp/dist/NexsoftAutomationCockpit` | prova di fumo sul pacchetto costruito |
+
+I test preparano da soli licenza di prova (chiave creata al volo), progetto, finto Jira, finto server MCP e finto `claude` in `.tmp/test`. Non toccano i dati reali in `%APPDATA%`.

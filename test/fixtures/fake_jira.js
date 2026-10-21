@@ -1,0 +1,1 @@
+require('http').createServer((req, res) => { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(req.url.includes('/myself') ? JSON.stringify({ displayName: 'Utente Prova', emailAddress: 'prova@esempio.it' }) : JSON.stringify({ issues: [], total: 0 })); }).listen(Number(process.env.FAKE_JIRA_PORT || 4500));
