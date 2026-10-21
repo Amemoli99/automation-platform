@@ -27,9 +27,9 @@ fs.mkdirSync(PKG, { recursive: true });
 // 1) file che restano com'erano (eseguibile, documentazione, kit, interfaccia nel browser, dati letti a runtime)
 const ASSETS = path.join('src', 'server', 'assets');
 for (const rel of [NAME + '.exe', 'README.md', 'kit']) copy(rel);
-copy(path.join('ui', 'public'), path.join('ui', 'public'));
+copy(path.join('src', 'web'), path.join('ui', 'public'));
 for (const f of ['templates', 'catalog.json', 'skill-steps.json', 'version.json', '.gitignore']) copy(path.join(ASSETS, f), path.join('ui', f));
-for (const f of ['Launcher.cs', 'build-exe.ps1']) copy(path.join('ui', f), path.join('ui', f));
+for (const f of ['Launcher.cs', 'build-exe.ps1']) copy(path.join('launcher', f), path.join('ui', f));
 
 // 2) backend: un solo file per il server e uno per il simulatore della modalità Demo (è lanciato come processo a parte)
 const OBF = {

@@ -1,4 +1,4 @@
-# Compila ui\Launcher.cs in NexsoftAutomationCockpit.exe nella root del progetto (usa il csc di .NET Framework, già presente su Windows).
+# Compila Launcher.cs (launcher\ nel repository, ui\ nel pacchetto) in NexsoftAutomationCockpit.exe nella root del progetto (usa il csc di .NET Framework, già presente su Windows).
 $csc = "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
 $root = Split-Path $PSScriptRoot -Parent
 & $csc /nologo /target:winexe /optimize+ /r:System.Windows.Forms.dll "/out:$root\NexsoftAutomationCockpit.exe" "$PSScriptRoot\Launcher.cs"
