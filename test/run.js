@@ -88,7 +88,7 @@ async function startEnv(name, opt = {}) {
     if (s !== 200) { stop(); throw new Error('Jira di prova non configurato: ' + JSON.stringify(j).slice(0, 200)); }
     [s, j] = await api(base, 'POST', '/api/jira/unlink', {});
   }
-  return { base, dir: parent, data, root: path.join(proj, 'p'), stop, log: () => log };
+  return { base, dir: parent, data, stubLog: env.STUB_LOG, root: path.join(proj, 'p'), stop, log: () => log };
 }
 
 const SUITES = {
@@ -97,6 +97,7 @@ const SUITES = {
     { name: 'diretta: finestre, mascheramento, output', file: 'test/flow/live-test.js', env: { stub: 'stub_live_claude.js', secretEnv: true } },
     { name: 'Demo e Jira', file: 'test/flow/demo-jira-test.js', env: { noProject: true } },
     { name: 'accesso protetto (token, cookie, Origin, Host)', file: 'test/flow/auth-test.js', env: { auth: true, noProject: true }, withToken: true },
+    { name: 'permessi concessi e domande a margine', file: 'test/flow/allow-test.js', env: { stub: 'stub_allow_claude.js' }, withLog: true },
     { name: 'sgancio alla chiusura', file: 'test/flow/detach-test.js', env: {}, withData: true },
     { name: 'rotte del server (stato e messaggi identici al registro)', file: 'test/flow/routes-probe.js', env: { stub: 'stub_live_claude.js' }, withRoot: true },
   ],
@@ -112,7 +113,7 @@ const SUITES = {
     if (t.unit) { if (await runNode(path.join(ROOT, t.file), [], {})) bad++; continue; }
     let env;
     try { env = await startEnv(path.basename(t.file, '.js'), t.env); } catch (e) { console.log('  KO  ' + e.message); bad++; continue; }
-    const extra = t.withDir ? [env.dir] : t.withRoot ? [env.root] : t.withToken ? ['token-di-prova-1234567890'] : t.withData ? [env.data, env.root] : [];
+    const extra = t.withDir ? [env.dir] : t.withRoot ? [env.root] : t.withToken ? ['token-di-prova-1234567890'] : t.withData ? [env.data, env.root] : t.withLog ? [env.root, env.stubLog] : [];
     if (argv.includes('--record')) extra.push('--record'); // rigenera il registro delle rotte
     try { if (await runNode(path.join(ROOT, t.file), [env.base, ...extra], {})) bad++; } finally { env.stop(); }
   }
