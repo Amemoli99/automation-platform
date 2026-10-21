@@ -9,6 +9,8 @@ const path = require('path');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
 const mcpclient = require('./mcpclient');
+const { spawnClaude } = require('./infra/claude');
+const { killTree } = require('./infra/proc');
 
 const SERVER_RE = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/;
 const { dataDir } = require('./infra/paths');
@@ -98,10 +100,10 @@ async function start(root, server, request, env, opts = {}) {
       for (const c of ev.message.content) if (c.type === 'tool_result' && !quiet.has(c.tool_use_id)) push((c.is_error ? '  ✗ ' : '  ← ') + (clip1(blockText(c.content), 300) || '(nessun contenuto)'));
     } else if (ev.type === 'result') job.final = ev;
   };
-  const child = spawn(process.env.UI_CLAUDE_BIN || 'claude', args, { cwd: root, env, shell: true, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
+  const child = spawnClaude(args, { cwd: root, env, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
   busy = true; job.child = child;
   let buf = '', err = '', over = false, cancelled = false;
-  const kill = () => { if (process.platform === 'win32') spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], { windowsHide: true }); else child.kill('SIGTERM'); };
+  const kill = () => killTree(child);
   job.cancel = () => { cancelled = true; kill(); };
   const timer = setTimeout(() => { over = true; kill(); }, opts.timeoutMs || 300000);
   const lines = (chunk) => { buf += chunk; let i; while ((i = buf.indexOf('\n')) >= 0) { const l = buf.slice(0, i).trim(); buf = buf.slice(i + 1); if (l) { try { handle(JSON.parse(l)); } catch { /* riga non JSON */ } } } if (buf.length > 400000) buf = ''; };

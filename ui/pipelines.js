@@ -264,6 +264,8 @@ function saveSteps(root, steps) {
  * (JSON) che viene validato e mostrato come BOZZA nel modulo: non scrive file, lo fa solo il pulsante "Crea" dopo la revisione dell'utente. */
 const { spawn } = require('child_process');
 const os = require('os');
+const { spawnClaude } = require('./infra/claude');
+const { killTree } = require('./infra/proc');
 const DRAFT_TOOLS = ['Read', 'Grep', 'Glob', 'Bash', 'Write', 'Edit', 'WebFetch', 'WebSearch'];
 let drafting = false;
 
@@ -319,9 +321,9 @@ function callClaude(prompt, opts = {}) {
   return new Promise((resolve, reject) => {
     const args = claudeArgs(false);
     drafting = true;
-    const p = spawn(process.env.UI_CLAUDE_BIN || 'claude', args, { cwd: os.tmpdir(), shell: true, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
+    const p = spawnClaude(args, { cwd: os.tmpdir(), stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
     let out = '', err = '', over = false;
-    const kill = () => { if (process.platform === 'win32') spawn('taskkill', ['/pid', String(p.pid), '/T', '/F'], { windowsHide: true }); else p.kill('SIGTERM'); };
+    const kill = () => killTree(p);
     const timer = setTimeout(() => { over = true; kill(); }, opts.timeoutMs || 120000);
     p.stdout.on('data', (d) => { if (out.length < 400000) out += d; });
     p.stderr.on('data', (d) => { if (err.length < 4000) err += d; });
@@ -341,10 +343,10 @@ function callClaude(prompt, opts = {}) {
 // Come callClaude, ma in streaming: onText riceve i pezzi di testo man mano che Claude li scrive. Restituisce { promise, cancel }.
 function streamClaude(prompt, opts, onText) {
   let child = null, cancelled = false;
-  const kill = () => { if (!child) return; if (process.platform === 'win32') spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], { windowsHide: true }); else child.kill('SIGTERM'); };
+  const kill = () => killTree(child);
   const promise = new Promise((resolve, reject) => {
     drafting = true;
-    const p = child = spawn(process.env.UI_CLAUDE_BIN || 'claude', claudeArgs(true), { cwd: os.tmpdir(), shell: true, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
+    const p = child = spawnClaude(claudeArgs(true), { cwd: os.tmpdir(), stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
     let buf = '', err = '', over = false, final = null;
     const timer = setTimeout(() => { over = true; kill(); }, (opts && opts.timeoutMs) || 120000);
     const handle = (line) => {

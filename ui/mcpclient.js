@@ -7,6 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 const mcpenv = require('./mcpenv');
+const { killTree } = require('./infra/proc');
 
 const PROTOCOL = '2025-06-18';
 const IDLE_MS = 5 * 60 * 1000;
@@ -112,7 +113,7 @@ class Session {
   close() {
     if (!this.closed) {
       this.fail(new Error('Sessione chiusa.'));
-      try { if (process.platform === 'win32') spawn('taskkill', ['/pid', String(this.proc.pid), '/T', '/F'], { windowsHide: true }); else this.proc.kill('SIGTERM'); } catch { /* già chiuso */ }
+      killTree(this.proc);
     }
   }
 }

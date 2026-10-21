@@ -4,6 +4,8 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const paths = require('./infra/paths');
+const { spawnClaude } = require('./infra/claude');
+const { killTree } = require('./infra/proc');
 const { spawn } = require('child_process');
 const config = require('./config');
 const projects = require('./projects');
@@ -415,7 +417,7 @@ function launch(resume) {
   // shell:true serve su Windows per risolvere claude.cmd; gli args sono costanti, il ticket va via stdin
   const p = DEMO
     ? spawn(process.execPath, [demo.SIM], { cwd: ROOT, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true })
-    : spawn(process.env.UI_CLAUDE_BIN || 'claude', args, { cwd: ROOT, env: { ...jdks.envFor(prefsFor(ROOT).jdk), ...mcpenv.cached(ROOT) }, shell: true, stdio: ['pipe', 'pipe', 'pipe'] });
+    : spawnClaude(args, { cwd: ROOT, env: { ...jdks.envFor(prefsFor(ROOT).jdk), ...mcpenv.cached(ROOT) }, stdio: ['pipe', 'pipe', 'pipe'] });
   proc = p;
   let buf = '';
   p.stdout.on('data', (d) => {
@@ -636,7 +638,7 @@ function askBtw(question) {
   if (!sessionId || !/^[\w-]{3,64}$/.test(sessionId)) throw new Error('There is no session to ask about yet: start a run first.');
   return new Promise((resolve, reject) => {
     const args = ['-p', '--resume', sessionId, '--fork-session', '--output-format', 'json', '--permission-mode', 'default', '--max-turns', '4', '--max-budget-usd', '0.5'];
-    const p = spawn(process.env.UI_CLAUDE_BIN || 'claude', args, { cwd: ROOT, env: { ...jdks.envFor(prefsFor(ROOT).jdk), ...mcpenv.cached(ROOT) }, shell: true, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
+    const p = spawnClaude(args, { cwd: ROOT, env: { ...jdks.envFor(prefsFor(ROOT).jdk), ...mcpenv.cached(ROOT) }, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
     btwProc = p;
     let out = '', err = '', over = false;
     const timer = setTimeout(() => { over = true; killTree(p); }, 120000);
@@ -656,18 +658,11 @@ function askBtw(question) {
     p.stdin.end(BTW_PREFIX + q);
   });
 }
-function killTree(p) {
-  if (!p) return;
-  if (process.platform === 'win32') spawn('taskkill', ['/pid', String(p.pid), '/T', '/F'], { windowsHide: true });
-  else p.kill('SIGTERM');
-}
 function cancelBtw() { const p = btwProc; btwProc = null; killTree(p); }
 
 function stop() {
   cancelBtw();
-  if (!proc) return;
-  if (process.platform === 'win32') spawn('taskkill', ['/pid', String(proc.pid), '/T', '/F']);
-  else proc.kill('SIGTERM');
+  killTree(proc);
 }
 
 function readBody(req) {

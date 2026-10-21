@@ -5,6 +5,8 @@ const os = require('os');
 const path = require('path');
 const { exec } = require('child_process');
 const jdks = require('./jdks');
+const { claudeBin, spawnClaude } = require('./infra/claude');
+const { killTree } = require('./infra/proc');
 
 const settingsFile = (root) => path.join(root, '.claude', 'settings.json');
 const localFile = (root) => path.join(root, '.claude', 'settings.local.json');
@@ -218,7 +220,7 @@ async function diagnostics(root, opts = {}) {
 const loginJob = { child: null, state: 'idle', url: '', error: '' };
 function loginState() { return { state: loginJob.state, url: loginJob.url, error: loginJob.error }; }
 async function authStatus() {
-  const r = await run(process.env.UI_CLAUDE_BIN || 'claude', ['auth', 'status']);
+  const r = await run(claudeBin(), ['auth', 'status']);
   let a = {};
   try { a = JSON.parse(r.out); } catch { /* output non JSON */ }
   return { loggedIn: !!a.loggedIn, email: a.email || '', authMethod: a.authMethod || '', subscriptionType: a.subscriptionType || '' };
@@ -228,7 +230,7 @@ function startLogin() {
   Object.assign(loginJob, { state: 'running', url: '', error: '' });
   const { spawn } = require('child_process');
   // shell:true per risolvere claude.cmd su Windows; gli argomenti sono costanti
-  const p = spawn(process.env.UI_CLAUDE_BIN || 'claude', ['auth', 'login', '--claudeai'], { shell: true, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+  const p = spawnClaude(['auth', 'login', '--claudeai'], { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
   loginJob.child = p;
   const sniff = (d) => { const m = String(d).match(/https?:\/\/\S+/); if (m && !loginJob.url) loginJob.url = m[0]; };
   p.stdout.on('data', sniff); p.stderr.on('data', sniff);
@@ -246,7 +248,7 @@ function startLogin() {
 function stopLogin(reason) {
   const p = loginJob.child;
   loginJob.child = null;
-  if (p) { try { exec('taskkill /pid ' + p.pid + ' /T /F', { windowsHide: true }, () => {}); } catch { /* già terminato */ } }
+  killTree(p);
   Object.assign(loginJob, { state: reason ? 'failed' : 'idle', error: reason || '' });
   return loginState();
 }
