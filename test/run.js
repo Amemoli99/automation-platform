@@ -49,7 +49,7 @@ async function startEnv(name, opt = {}) {
   fs.writeFileSync(path.join(data, 'active-project.json'), JSON.stringify({ recent: [], sources: [{ provider: 'github', host: 'github.com', owner: 'org-esempio' }, { provider: 'gitlab', host: 'gitlab.esempio.it', owner: 'gruppo-esempio' }], prefs: {}, frameworkRepo: 'https://maven.pkg.github.com/mia-org/mio-repo' }));
 
   const children = [];
-  const env = { ...process.env, UI_AUTH: 'off', UI_LICENSE_PUB_PEM: pub, UI_DATA_DIR: data, UI_WORKSPACE: path.join(dir, 'ws'), STUB_LOG: path.join(dir, 'stub-log.json'), ENV_LOG: path.join(dir, 'env-log.json') };
+  const env = { ...process.env, ...(opt.auth ? { UI_TOKEN: 'token-di-prova-1234567890' } : { UI_AUTH: 'off' }), UI_LICENSE_PUB_PEM: pub, UI_DATA_DIR: data, UI_WORKSPACE: path.join(dir, 'ws'), STUB_LOG: path.join(dir, 'stub-log.json'), ENV_LOG: path.join(dir, 'env-log.json') };
   if (opt.stub) { // il server lancia "claude" con shell:true: su Windows serve un .cmd che richiami il finto
     const cmd = path.join(dir, 'claude.cmd');
     fs.writeFileSync(cmd, '@echo off\r\nnode "' + path.join(FIX, opt.stub) + '" %*\r\n');
@@ -68,7 +68,7 @@ async function startEnv(name, opt = {}) {
   children.push(server);
   const stop = () => { for (const c of children) { try { c.kill(); } catch { /* già terminato */ } } };
   let up = false;
-  for (let i = 0; i < 60 && !up; i++) { try { const r = await fetch(base + '/api/version'); up = r.ok; } catch { await sleep(250); } }
+  for (let i = 0; i < 60 && !up; i++) { try { const r = await fetch(base + '/api/version'); up = r.status < 500; } catch { await sleep(250); } }
   if (!up) { stop(); throw new Error('il server non è partito:\n' + log); }
 
   // progetto di prova: creato dall'app stessa, come farebbe l'utente dal wizard
@@ -96,6 +96,7 @@ const SUITES = {
   flow: [
     { name: 'diretta: finestre, mascheramento, output', file: 'test/flow/live-test.js', env: { stub: 'stub_live_claude.js', secretEnv: true } },
     { name: 'Demo e Jira', file: 'test/flow/demo-jira-test.js', env: { noProject: true } },
+    { name: 'accesso protetto (token, cookie, Origin, Host)', file: 'test/flow/auth-test.js', env: { auth: true, noProject: true }, withToken: true },
     { name: 'rotte del server (stato e messaggi identici al registro)', file: 'test/flow/routes-probe.js', env: { stub: 'stub_live_claude.js' }, withRoot: true },
   ],
   smoke: [{ name: 'prova di fumo (pagine, Jira, MCP, editor, wizard, Demo)', file: 'test/smoke/smoke-test.js', env: { stub: 'stub_panel_claude.js', jira: true, mcp: true }, withDir: true }],
@@ -110,7 +111,7 @@ const SUITES = {
     if (t.unit) { if (await runNode(path.join(ROOT, t.file), [], {})) bad++; continue; }
     let env;
     try { env = await startEnv(path.basename(t.file, '.js'), t.env); } catch (e) { console.log('  KO  ' + e.message); bad++; continue; }
-    const extra = t.withDir ? [env.dir] : t.withRoot ? [env.root] : [];
+    const extra = t.withDir ? [env.dir] : t.withRoot ? [env.root] : t.withToken ? ['token-di-prova-1234567890'] : [];
     if (argv.includes('--record')) extra.push('--record'); // rigenera il registro delle rotte
     try { if (await runNode(path.join(ROOT, t.file), [env.base, ...extra], {})) bad++; } finally { env.stop(); }
   }
