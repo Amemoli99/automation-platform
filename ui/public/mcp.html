@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="/logo_nexsoft_squared-min.webp">
+<title>Server MCP · Nexsoft Automation Cockpit</title>
+<style>
+  :root { color-scheme: light dark; --bg:#f6f7f9; --panel:#fff; --subtle:#fafbfc; --fg:#16181d; --muted:#6a7280; --line:#e4e7ec; --line-strong:#cfd4dc; --brand:#f28c1a; --brand-d:#d9770a; --brand-soft:#fff4e5; --ok:#12a150; --ok-soft:#e8f7ee; --warn:#b7791f; --warn-soft:#fff7e0; --err:#d92d20; --err-soft:#fef1f0; --code:#f1f3f6; --radius:12px; --mono:ui-monospace,"Cascadia Mono",Consolas,monospace; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#14161a; --panel:#1c1f25; --subtle:#20242b; --fg:#e8eaee; --muted:#9aa3b2; --line:#2c313a; --line-strong:#3a404b; --brand-soft:#33261a; --ok-soft:#14301f; --warn-soft:#332a14; --err-soft:#3a1d1a; --code:#262a32; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.5 "Segoe UI",system-ui,sans-serif; }
+  header { display:flex; align-items:center; gap:12px; padding:12px 20px; background:var(--panel); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; flex-wrap:wrap; }
+  header img { width:28px; height:28px; } header h1 { font-size:16px; margin:0; }
+  main { max-width:1100px; margin:20px auto; padding:0 20px; display:grid; gap:18px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:20px 22px; }
+  .card h2 { margin:0 0 4px; font-size:17px; } .card p.sub { margin:0 0 14px; color:var(--muted); }
+  .chip { display:inline-block; padding:2px 9px; border-radius:99px; font-size:12px; background:var(--code); color:var(--muted); }
+  .chip.ok { background:var(--ok-soft); color:var(--ok); } .chip.warn { background:var(--warn-soft); color:var(--warn); } .chip.err { background:var(--err-soft); color:var(--err); }
+  label.l { display:block; font-weight:600; margin:12px 0 4px; }
+  small.hint { display:block; color:var(--muted); font-size:12px; margin-top:4px; }
+  input[type=text], input[type=password], input[type=number], textarea, select { width:100%; padding:8px 10px; border:1px solid var(--line-strong); border-radius:8px; background:var(--panel); color:var(--fg); font:inherit; }
+  header select { width:auto; min-width:200px; }
+  textarea { min-height:70px; resize:vertical; font:12.5px var(--mono); }
+  input:focus, textarea:focus, select:focus { outline:2px solid var(--brand); outline-offset:-1px; }
+  button { font:inherit; padding:8px 14px; border-radius:8px; border:1px solid var(--line-strong); background:var(--panel); color:var(--fg); cursor:pointer; }
+  button.primary { background:var(--brand); border-color:var(--brand-d); color:#fff; font-weight:600; } button:disabled { opacity:.5; cursor:default; }
+  button.sm { padding:4px 9px; font-size:12px; } button.danger { color:var(--err); }
+  .bar { display:flex; gap:10px; align-items:center; margin-top:14px; flex-wrap:wrap; }
+  .callout { padding:10px 13px; border-radius:10px; background:var(--code); margin:10px 0; font-size:13px; white-space:pre-wrap; }
+  .callout.err { background:var(--err-soft); color:var(--err); } .callout.warn { background:var(--warn-soft); } .callout.ok { background:var(--ok-soft); }
+  .var { display:grid; grid-template-columns:230px 1fr auto; gap:10px; align-items:center; margin:8px 0; } .var code { font:12.5px var(--mono); }
+  @media (max-width:700px) { .var { grid-template-columns:1fr; } }
+  /* barra di avanzamento a passi */
+  .dl-track { height:10px; background:var(--code); border-radius:99px; overflow:hidden; margin:6px 0 12px; }
+  .dl-fill { height:100%; width:0; background:linear-gradient(90deg,var(--brand),var(--brand-d)); border-radius:99px; transition:width .5s ease; }
+  .dl-fill.run { background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.28) 0 10px,transparent 10px 20px),linear-gradient(90deg,var(--brand),var(--brand-d)); background-size:28px 28px,100% 100%; animation:dl-move 1s linear infinite; }
+  @keyframes dl-move { to { background-position:28px 0,0 0; } }
+  @media (prefers-reduced-motion: reduce) { .dl-fill.run { animation:none; } }
+  ol.dl-steps { list-style:none; margin:0; padding:0; display:grid; gap:6px; }
+  ol.dl-steps .chip:empty { display:none; }
+  ol.dl-steps li { display:flex; gap:10px; align-items:center; color:var(--muted); }
+  ol.dl-steps li.cur { color:var(--fg); font-weight:600; } ol.dl-steps li.done { color:var(--ok); } ol.dl-steps li.fail { color:var(--err); font-weight:600; }
+  ol.dl-steps .n { width:22px; height:22px; border-radius:50%; display:grid; place-items:center; font-size:11.5px; border:2px solid var(--line-strong); flex:none; }
+  ol.dl-steps li.cur .n { border-color:var(--brand); } ol.dl-steps li.done .n { background:var(--ok); border-color:var(--ok); color:#fff; } ol.dl-steps li.fail .n { background:var(--err); border-color:var(--err); color:#fff; }
+  /* scheda */
+  details.grp { border:1px solid var(--line); border-radius:10px; margin:12px 0; background:var(--subtle); }
+  details.grp > summary { cursor:pointer; padding:10px 14px; font-weight:600; }
+  .tool { border-top:1px solid var(--line); padding:14px; background:var(--panel); }
+  .tool:first-of-type { border-top:0; }
+  .tool h3 { margin:0; font-size:15px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .tool .help { color:var(--muted); margin:2px 0 8px; }
+  .frm { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:4px 14px; }
+  .frm label { font-weight:600; font-size:12.5px; margin-top:6px; display:block; } .frm .chk { display:flex; gap:8px; align-items:center; margin-top:22px; font-weight:400; } .frm .chk input { width:auto; }
+  .res { margin-top:10px; }
+  table.t { width:100%; border-collapse:collapse; font-size:13px; } table.t th { text-align:left; color:var(--muted); font-size:12px; padding:4px 8px; border-bottom:1px solid var(--line); } table.t td { padding:5px 8px; border-bottom:1px solid var(--line); vertical-align:top; word-break:break-word; }
+  .li { padding:7px 10px; border:1px solid var(--line); border-radius:8px; margin:5px 0; } .li b { display:block; } .li small { color:var(--muted); }
+  pre { margin:0; padding:10px; background:var(--code); border-radius:8px; overflow:auto; font:12px var(--mono); white-space:pre-wrap; word-break:break-word; max-height:420px; }
+  .empty { padding:30px; text-align:center; color:var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <img src="/logo_nexsoft_squared-min.webp" alt="">
+  <h1>Server MCP</h1>
+  <span class="chip" id="proj"></span>
+  <select id="srv" aria-label="Server MCP"></select>
+  <span style="flex:1"></span>
+  <button type="button" id="close-tab">Chiudi questa scheda</button>
+</header>
+<main id="main"><div class="card"><div class="empty">Caricamento…</div></div></main>
+<script src="/mcpview.js"></script>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  async function api(path, body) {
+    const r = await fetch(path, body === undefined ? { cache: 'no-store' } : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    let j = {}; try { j = await r.json(); } catch { /* risposta non JSON */ }
+    if (!r.ok) throw Object.assign(new Error(j.error || ('Errore ' + r.status)), { status: r.status, data: j });
+    return j;
+  }
+  const callout = (kind, text) => mk('div', 'callout ' + kind, text);
+  $('close-tab').onclick = () => window.close();
+
+  let servers = [], cur = null, tools = null, toolsErr = null, panel = null, mode = 'view'; // mode: view | creating | preview
+  const params = new URLSearchParams(location.search);
+
+  /* ---------- barra di avanzamento a passi ---------- */
+  function progress(labels) {
+    const box = mk('div');
+    const track = mk('div', 'dl-track'); const fill = mk('div', 'dl-fill'); track.append(fill);
+    const ol = mk('ol', 'dl-steps');
+    const lis = labels.map((t, i) => { const li = mk('li'); li.append(mk('span', 'n', String(i + 1)), mk('span', '', t)); const s = mk('span', 'chip'); s.style.marginLeft = 'auto'; li.append(s); ol.append(li); return li; });
+    const note = mk('small', 'hint'); box.append(track, ol, note);
+    let done = 0, timer = null, t0 = 0;
+    const set = (i, state) => {
+      lis.forEach((li, k) => { li.className = k < i ? 'done' : (k === i ? state : ''); li.querySelector('.n').textContent = k < i ? '✓' : (k === i && state === 'fail' ? '!' : String(k + 1)); li.lastChild.textContent = ''; });
+      done = i;
+      fill.className = 'dl-fill' + (state === 'cur' ? ' run' : '');
+      fill.style.width = Math.round(((i + (state === 'cur' ? 0.5 : (state === 'fail' ? 0 : 1))) / labels.length) * 100) + '%';
+      clearInterval(timer);
+      if (state === 'cur') { t0 = Date.now(); const upd = () => { lis[i].lastChild.textContent = Math.round((Date.now() - t0) / 1000) + ' s'; }; upd(); timer = setInterval(upd, 1000); }
+    };
+    return { el: box, step: (i) => set(i, 'cur'), fail: (i, msg) => { set(i, 'fail'); note.textContent = msg || ''; }, finish: () => { set(labels.length - 1, 'done'); fill.style.width = '100%'; fill.className = 'dl-fill'; lis.forEach((l) => { l.className = 'done'; l.querySelector('.n').textContent = '✓'; }); }, note: (t) => { note.textContent = t; } };
+  }
+
+  /* ---------- credenziali ---------- */
+  function credsCard(s) {
+    const card = mk('div', 'card');
+    card.append(mk('h2', '', '1. Credenziali'));
+    if (!s.vars.length) { card.append(mk('p', 'sub', 'Questo server non richiede variabili d\'ambiente nel file .mcp.json: non c\'è nulla da impostare.')); return card; }
+    card.append(mk('p', 'sub', 'Il server ha bisogno di queste variabili. I valori si salvano cifrati (Windows DPAPI) fuori dal progetto e non finiscono mai nel repository né nel file .mcp.json. Lasciando un campo vuoto non lo cambi.'));
+    const inputs = {};
+    for (const v of s.vars) {
+      const row = mk('div', 'var');
+      const nm = mk('div'); nm.append(mk('code', '', v.name), document.createTextNode(' '));
+      nm.append(v.set ? mk('span', 'chip ok', 'impostata') : (v.inEnv ? mk('span', 'chip warn', 'presente nell\'ambiente di Windows') : mk('span', 'chip err', 'da impostare')));
+      const inp = mk('input'); inp.type = 'password'; inp.autocomplete = 'new-password'; inp.placeholder = v.set ? '•••••••• (invariata)' : 'Valore'; inputs[v.name] = inp;
+      const rm = mk('button', 'sm danger', 'Rimuovi'); rm.type = 'button'; rm.disabled = !v.set;
+      rm.onclick = async () => { try { await api('/api/mcp/env', { server: s.name, values: { [v.name]: '' } }); await loadAll(s.name); } catch (e) { msg.replaceChildren(callout('err', e.message)); } };
+      row.append(nm, inp, rm); card.append(row);
+    }
+    const msg = mk('div'); const bar = mk('div', 'bar'); const save = mk('button', 'primary', 'Salva le credenziali'); save.type = 'button'; bar.append(save); card.append(bar, msg);
+    save.onclick = async () => {
+      const values = {}; for (const [k, i] of Object.entries(inputs)) if (i.value) values[k] = i.value;
+      if (!Object.keys(values).length) { msg.replaceChildren(callout('warn', 'Scrivi almeno un valore.')); return; }
+      save.disabled = true;
+      try { await api('/api/mcp/env', { server: s.name, values }); await loadAll(s.name, 'Credenziali salvate (cifrate). Il server verrà riavviato con i nuovi valori.'); }
+      catch (e) { msg.replaceChildren(callout('err', e.message)); save.disabled = false; }
+    };
+    return card;
+  }
+
+  /* ---------- disegno della scheda: condiviso con la pagina principale (mcpview.js) ---------- */
+  const panelView = (s, desc) => window.NXMcpView.panelView(s, desc, tools);
+
+  /* ---------- creazione della scheda ---------- */
+  async function createPanel(s, useClaude) {
+    mode = 'creating'; render();
+    const holder = $('panel-holder');
+    const pr = progress(useClaude ? ['Avvio del server e lettura dei tool', 'Claude scrive la scheda', 'Controllo e anteprima'] : ['Avvio del server e lettura dei tool', 'Costruzione della scheda semplice', 'Controllo e anteprima']);
+    holder.replaceChildren(pr.el);
+    let step = 0;
+    try {
+      pr.step(0); pr.note('La prima volta il server può scaricare il suo pacchetto: ci vuole qualche minuto.');
+      await loadTools(s.name, true);
+      if (toolsErr) throw new Error(toolsErr);
+      pr.note(tools.length + ' tool trovati.'); step = 1; pr.step(1);
+      if (useClaude) pr.note('Una sola richiesta a Sonnet, senza tool: usa un po\' della quota del tuo abbonamento. Può richiedere fino a un minuto.');
+      const r = await api(useClaude ? '/api/mcp/panel/draft' : '/api/mcp/panel/auto', { server: s.name });
+      step = 2; pr.step(2); await new Promise((res) => setTimeout(res, 400));
+      pr.finish(); pr.note('Scheda pronta: controllala qui sotto prima di salvarla.');
+      panel = r.descriptor; mode = 'preview';
+      setTimeout(render, 700);
+    } catch (e) {
+      pr.fail(step, e.message);
+      const bar = mk('div', 'bar'); const back = mk('button', '', 'Chiudi'); back.type = 'button'; back.onclick = () => { mode = 'view'; render(); }; bar.append(back);
+      if (useClaude) { const simple = mk('button', '', 'Crea la scheda semplice (senza Claude)'); simple.type = 'button'; simple.onclick = () => createPanel(s, false); bar.append(simple); }
+      holder.append(bar);
+    }
+  }
+
+  function panelCard(s) {
+    const card = mk('div', 'card');
+    card.append(mk('h2', '', '2. Scheda di ' + s.name));
+    const mrow = mk('div'); mrow.style.margin = '8px 0 4px';
+    mrow.append(mk('label', 'l', 'Cosa può fare Claude da solo con questo server'));
+    const msel = mk('select'); msel.disabled = mode === 'creating';
+    for (const [v, t] of [['read', 'Solo gli strumenti riconosciuti come di lettura (consigliato)'], ['readonly', 'Il server è di sola lettura: tutti i suoi strumenti possono partire da soli'], ['all', 'Tutti gli strumenti, anche quelli che modificano dati (tranne quelli segnalati come distruttivi)']]) msel.append(Object.assign(mk('option', '', t), { value: v }));
+    msel.value = s.mode || 'read';
+    msel.onchange = async () => {
+      if (msel.value === 'readonly' && !confirm('Stai dichiarando che "' + s.name + '" è DAVVERO di sola lettura (per esempio un database con un utente che può solo leggere). Il Cockpit non può verificarlo: se non lo è, Claude potrebbe modificare dati senza chiederti conferma.\n\nConfermi?')) { msel.value = s.mode || 'read'; return; }
+      if (msel.value === 'all' && !confirm('Con questa scelta Claude potrà usare da solo OGNI strumento di "' + s.name + '", anche quelli che creano, modificano o cancellano dati, senza chiederti conferma a ogni passo (restano esclusi solo quelli che il server segnala come distruttivi).\n\nConfermi?')) { msel.value = s.mode || 'read'; return; }
+      try { await api('/api/mcp/mode', { server: s.name, mode: msel.value }); s.mode = msel.value; render(); } catch (e) { msel.value = s.mode || 'read'; alert(e.message); }
+    };
+    mrow.append(msel, mk('small', 'hint', 'Vale per "Chiedi a Claude" nella scheda: con il livello predefinito Claude usa da solo solo gli strumenti di lettura; per le altre azioni c\'è "Proponi un\'azione", che chiede sempre la tua conferma. La scelta è tua e il Cockpit non può verificare cosa fa davvero il server.'));
+    card.append(mrow);
+    const holder = mk('div'); holder.id = 'panel-holder'; card.append(holder);
+    if (mode === 'creating') return card;
+    if (toolsErr) {
+      holder.append(callout('err', toolsErr + (s.vars.some((v) => !v.set && !v.inEnv) ? '\n\nSuggerimento: imposta prima le credenziali qui sopra.' : '')));
+      const b = mk('button', '', 'Riprova'); b.type = 'button'; b.onclick = async () => { await loadAll(s.name); }; holder.append(b);
+      return card;
+    }
+    if (mode === 'preview' && panel) {
+      holder.append(callout('warn', 'Anteprima: la scheda non è ancora salvata. Gli strumenti qui sotto funzionano già, ma quelli che modificano dati chiedono sempre conferma.'));
+      holder.append(panelView(s, panel, true));
+      const bar = mk('div', 'bar'); const ok = mk('button', 'primary', 'Salva la scheda'); ok.type = 'button'; const no = mk('button', '', 'Scarta'); no.type = 'button'; bar.append(ok, no); holder.append(bar);
+      const m = mk('div'); holder.append(m);
+      ok.onclick = async () => { ok.disabled = true; try { const r = await api('/api/mcp/panel/save', { server: s.name, descriptor: panel }); panel = r.descriptor; mode = 'view'; s.hasPanel = true; render(); } catch (e) { m.replaceChildren(callout('err', e.message)); ok.disabled = false; } };
+      no.onclick = () => { panel = null; mode = 'view'; loadAll(s.name); };
+      return card;
+    }
+    if (panel) {
+      holder.append(panelView(s, panel, false));
+      const bar = mk('div', 'bar'); const re = mk('button', '', 'Ricrea la scheda'); re.type = 'button'; const del = mk('button', 'danger', 'Elimina la scheda'); del.type = 'button'; bar.append(re, del); holder.append(bar);
+      re.onclick = () => { panel = null; render(); };
+      del.onclick = async () => { if (!confirm('Eliminare la scheda salvata di "' + s.name + '"? Il server resta nel progetto.')) return; await api('/api/mcp/panel/delete', { server: s.name }); panel = null; s.hasPanel = false; render(); };
+      return card;
+    }
+    holder.append(mk('p', 'sub', 'Una scheda è un\'interfaccia pronta per usare i tool del server (cerca, leggi, crea…) senza passare dalla chat. Non contiene codice: è una descrizione che il Cockpit disegna, quindi non può eseguire nulla da sola.'));
+    holder.append(callout('', tools ? 'Il server espone ' + tools.length + ' tool.' : 'Il server non è ancora stato avviato.'));
+    const bar = mk('div', 'bar');
+    const withC = mk('button', 'primary', 'Crea la scheda con Claude'); withC.type = 'button'; withC.onclick = () => createPanel(s, true);
+    const simple = mk('button', '', 'Scheda semplice (senza Claude)'); simple.type = 'button'; simple.onclick = () => createPanel(s, false);
+    bar.append(withC, simple); holder.append(bar);
+    holder.append(mk('small', 'hint', 'Con Claude: nomi e spiegazioni in italiano, tool raggruppati per scopo. Usa una richiesta a Sonnet (quota dell\'abbonamento). La scheda semplice raggruppa i tool per prefisso, senza usare Claude.'));
+    return card;
+  }
+
+  /* ---------- pagina ---------- */
+  function render() {
+    const s = servers.find((x) => x.name === cur);
+    const main = $('main'); main.replaceChildren();
+    if (!s) { main.append(Object.assign(mk('div', 'card'), {})); main.firstChild.append(mk('div', 'empty', servers.length ? 'Scegli un server dall\'elenco in alto.' : 'Il progetto non ha server MCP nel file .mcp.json. Aggiungine uno dalla scheda Tool del Cockpit.')); return; }
+    if (!s.supported) { const c = mk('div', 'card'); c.append(mk('h2', '', s.name), callout('warn', 'Questo server è remoto (' + s.type + '): la scheda gestisce solo server locali (stdio). Resta utilizzabile da Claude nella chat.')); main.append(c); return; }
+    if (params.get('setup') === '1' && !s.hasPanel && mode === 'view') main.append(Object.assign(callout('ok', 'Server aggiunto. Due passi: 1) imposta le credenziali (se servono), 2) crea la scheda per usarlo da qui.'), {}));
+    main.append(credsCard(s), panelCard(s));
+  }
+  function fillSelect() {
+    const sel = $('srv'); sel.replaceChildren();
+    for (const s of servers) sel.append(Object.assign(mk('option', '', s.name + (s.supported ? (s.hasPanel ? ' · scheda pronta' : '') : ' · remoto (non supportato)')), { value: s.name }));
+    if (cur) sel.value = cur;
+  }
+  $('srv').onchange = () => { if (window.__dirty) return; loadAll($('srv').value); };
+
+  async function loadTools(name, force) {
+    toolsErr = null;
+    if (!force && tools) return;
+    try { const r = await api('/api/mcp/tools', { server: name }); tools = r.tools; }
+    catch (e) { tools = null; toolsErr = e.message; }
+  }
+  async function loadAll(name, banner) {
+    const r = await api('/api/mcp/servers');
+    $('proj').textContent = r.project; servers = r.servers;
+    cur = name && servers.some((s) => s.name === name) ? name : (servers.find((s) => s.supported) || servers[0] || {}).name || null;
+    tools = null; toolsErr = null; panel = null; mode = 'view';
+    fillSelect();
+    const s = servers.find((x) => x.name === cur);
+    render();
+    if (s && s.supported) {
+      const slot = mk('small', 'hint', 'Avvio del server…'); const h = $('panel-holder'); if (h) h.replaceChildren(nxLoaderLite('Avvio del server e lettura dei tool…'));
+      await loadTools(cur, true);
+      if (s.hasPanel) { try { panel = (await api('/api/mcp/panel?server=' + encodeURIComponent(cur))).descriptor; } catch { panel = null; } }
+      render();
+      if (banner) { const c = callout('ok', banner); $('main').prepend(c); }
+    }
+  }
+  function nxLoaderLite(text) { const d = mk('div', 'callout', text); return d; }
+
+  loadAll(params.get('server')).catch((e) => {
+    $('main').replaceChildren(); const c = mk('div', 'card'); c.append(callout('err', e.message + (/progetto/i.test(e.message) ? '' : ' Riapri questa pagina dalla scheda Tool del Cockpit.'))); $('main').append(c);
+  });
+})();
+</script>
+</body>
+</html>

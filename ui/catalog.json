@@ -1,0 +1,64 @@
+{
+  "_nota": "Catalogo dei server MCP che si possono aggiungere a .mcp.json di un progetto dalla scheda Tool. Nessuna installazione: si scrive solo la voce nel progetto. I valori di 'env' devono essere segnaposto ${NOME}: i segreti non entrano mai nel progetto, li imposta chi usa il progetto nel proprio ambiente. Per npx su Windows la voce viene scritta con 'cmd /c'. Ogni voce riporta la fonte. Le voci Atlassian sono ricavate dal README di mcp-atlassian (letto il 2026-10-15) e non sono state provate con credenziali reali; la voce Playwright è la configurazione già usata dai progetti Nexsoft, il suo README non è stato riletto.",
+  "mcp": [
+    {
+      "id": "playwright",
+      "label": "Playwright (browser)",
+      "description": "Pilota un browser reale: lo usa l'Explorer per navigare l'applicazione e raccogliere i locator.",
+      "server": { "command": "npx", "args": ["@playwright/mcp@latest", "--browser", "chromium"] },
+      "notes": "La versione non è fissata (@latest) e il browser Chromium si scarica al primo uso.",
+      "source": "https://github.com/microsoft/playwright-mcp"
+    },
+    {
+      "id": "atlassian-jira",
+      "label": "Atlassian Jira",
+      "description": "Legge e aggiorna i ticket Jira dalla conversazione con claude (Jira Cloud con API token).",
+      "server": {
+        "command": "uvx",
+        "args": ["mcp-atlassian"],
+        "env": {
+          "JIRA_URL": "${JIRA_URL}",
+          "JIRA_USERNAME": "${JIRA_USERNAME}",
+          "JIRA_API_TOKEN": "${JIRA_API_TOKEN}"
+        }
+      },
+      "notes": "JIRA_URL è tipo https://azienda.atlassian.net. Per Server/Data Center servono variabili diverse (token personale): questa voce è per Cloud.",
+      "source": "https://github.com/sooperset/mcp-atlassian"
+    },
+    {
+      "id": "atlassian-confluence",
+      "label": "Atlassian Confluence",
+      "description": "Cerca, legge e modifica le pagine Confluence dalla conversazione con claude (Confluence Cloud con API token).",
+      "server": {
+        "command": "uvx",
+        "args": ["mcp-atlassian"],
+        "env": {
+          "CONFLUENCE_URL": "${CONFLUENCE_URL}",
+          "CONFLUENCE_USERNAME": "${CONFLUENCE_USERNAME}",
+          "CONFLUENCE_API_TOKEN": "${CONFLUENCE_API_TOKEN}"
+        }
+      },
+      "notes": "CONFLUENCE_URL termina con /wiki (es. https://azienda.atlassian.net/wiki). Il token si crea da id.atlassian.com. Per Server/Data Center servono variabili diverse.",
+      "source": "https://github.com/sooperset/mcp-atlassian"
+    },
+    {
+      "id": "atlassian",
+      "label": "Atlassian Jira + Confluence",
+      "description": "Un solo server per Jira e Confluence (Cloud con API token), invece di due voci separate.",
+      "server": {
+        "command": "uvx",
+        "args": ["mcp-atlassian"],
+        "env": {
+          "JIRA_URL": "${JIRA_URL}",
+          "JIRA_USERNAME": "${JIRA_USERNAME}",
+          "JIRA_API_TOKEN": "${JIRA_API_TOKEN}",
+          "CONFLUENCE_URL": "${CONFLUENCE_URL}",
+          "CONFLUENCE_USERNAME": "${CONFLUENCE_USERNAME}",
+          "CONFLUENCE_API_TOKEN": "${CONFLUENCE_API_TOKEN}"
+        }
+      },
+      "notes": "Stesso pacchetto delle due voci singole: scegline una sola per non avviare due volte lo stesso server.",
+      "source": "https://github.com/sooperset/mcp-atlassian"
+    }
+  ]
+}

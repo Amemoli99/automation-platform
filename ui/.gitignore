@@ -1,0 +1,3 @@
+# stato locale della UI (percorsi, progetti recenti, proprietari GitHub)
+.active-project.json
+*.bak-ui

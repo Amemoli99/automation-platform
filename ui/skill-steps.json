@@ -1,0 +1,14 @@
+{
+  "_nota": "Step mostrati a destra per le skill dei progetti (chiave = nome della skill). Ogni step si accende quando la skill chiama uno degli 'agents' (subagent_type) o delle 'skills' indicati. Lo step con id 'profile' è quello iniziale (si chiude al primo step riconosciuto). Gli step senza agent/skill non si accendono da soli. Non usare l'id 'run': è riservato alla pipeline del kit.",
+  "implementing-testsRAG": [
+    { "id": "profile", "label": "0 Setup", "desc": "Credenziali Jira, RAG, branch e lettura del ticket" },
+    { "id": "linter", "label": "1 Linter", "agents": ["it-linter"], "desc": "Controlla che il ticket sia pronto" },
+    { "id": "analyzer", "label": "2 Analyzer", "agents": ["analyzer"], "desc": "Legge ticket e .ts e sceglie la classe base" },
+    { "id": "explorer", "label": "3 Explorer", "agents": ["it-explorer", "it-explorerRAG"], "desc": "Naviga l'app dal vivo e raccoglie locator" },
+    { "id": "coder", "label": "4 Coder", "agents": ["java-coder", "it-coder-page-finder", "it-coder-page-finderRAG"], "desc": "Scrive il codice Java" },
+    { "id": "validator", "label": "5 Validator", "agents": ["it-validator"], "desc": "Analisi statica del test scritto" },
+    { "id": "test", "label": "6 Esecuzione", "skills": ["run-test"], "desc": "Esegue il test" },
+    { "id": "verifier", "label": "7 Verifier", "agents": ["it-verifier", "it-verifierRAG", "it-verifier-conformity", "it-verifier-log-parser"], "desc": "Analizza l'esito e la conformità al ticket" },
+    { "id": "triage", "label": "8 Triage", "agents": ["it-triage"], "desc": "Classifica l'eventuale fallimento" }
+  ]
+}

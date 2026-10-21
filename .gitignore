@@ -1,0 +1,11 @@
+node_modules/
+*.exe
+*.zip
+*.log
+.env
+.env.*
+*.pem
+license*.json
+.tmp/
+dist/
+.playwright-mcp/

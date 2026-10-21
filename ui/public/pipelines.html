@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="/logo_nexsoft_squared-min.webp">
+<title>Editor pipeline · Nexsoft Automation Cockpit</title>
+<style>
+  :root { color-scheme: light dark; --bg:#f6f7f9; --panel:#fff; --subtle:#fafbfc; --fg:#16181d; --muted:#6a7280; --line:#e4e7ec; --line-strong:#cfd4dc; --brand:#f28c1a; --brand-d:#d9770a; --brand-soft:#fff4e5; --ok:#12a150; --ok-soft:#e8f7ee; --warn:#b7791f; --warn-soft:#fff7e0; --err:#d92d20; --err-soft:#fef1f0; --code:#f1f3f6; --radius:12px; --mono:ui-monospace,"Cascadia Mono",Consolas,monospace; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#14161a; --panel:#1c1f25; --subtle:#20242b; --fg:#e8eaee; --muted:#9aa3b2; --line:#2c313a; --line-strong:#3a404b; --brand-soft:#33261a; --ok-soft:#14301f; --warn-soft:#332a14; --err-soft:#3a1d1a; --code:#262a32; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.5 "Segoe UI",system-ui,sans-serif; }
+  header { display:flex; align-items:center; gap:12px; padding:12px 20px; background:var(--panel); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }
+  header img { width:28px; height:28px; }
+  header h1 { font-size:16px; margin:0; }
+  .chip { display:inline-block; padding:2px 9px; border-radius:99px; font-size:12px; background:var(--code); color:var(--muted); }
+  .chip.ok { background:var(--ok-soft); color:var(--ok); } .chip.warn { background:var(--warn-soft); color:var(--warn); } .chip.err { background:var(--err-soft); color:var(--err); }
+  main { display:grid; grid-template-columns:290px 1fr; gap:20px; max-width:1500px; margin:20px auto; padding:0 20px; align-items:start; }
+  @media (max-width:860px) { main { grid-template-columns:1fr; } }
+  nav, .card { background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); }
+  nav { padding:8px; position:sticky; top:68px; max-height:calc(100vh - 90px); overflow:auto; }
+  @media (max-width:860px) { nav { position:static; max-height:none; } }
+  nav h2 { font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:12px 8px 4px; }
+  nav button.item { display:flex; width:100%; align-items:center; justify-content:space-between; gap:8px; text-align:left; background:none; border:0; padding:8px 10px; border-radius:8px; color:var(--fg); cursor:pointer; font:inherit; }
+  nav button.item:hover { background:var(--subtle); } nav button.item.cur { background:var(--brand-soft); font-weight:600; }
+  .card { padding:20px 22px; }
+  .card h3 { margin:0 0 4px; font-size:17px; } .card p.sub { margin:0 0 16px; color:var(--muted); }
+  label.l { display:block; font-weight:600; margin:16px 0 4px; }
+  small.hint { display:block; color:var(--muted); font-size:12px; margin-top:4px; }
+  input[type=text], textarea, select { width:100%; padding:8px 10px; border:1px solid var(--line-strong); border-radius:8px; background:var(--panel); color:var(--fg); font:inherit; }
+  textarea.code { font:12.5px/1.5 var(--mono); min-height:340px; resize:vertical; }
+  textarea.desc { min-height:64px; resize:vertical; }
+  input:focus, textarea:focus, select:focus { outline:2px solid var(--brand); outline-offset:-1px; }
+  button { font:inherit; padding:8px 14px; border-radius:8px; border:1px solid var(--line-strong); background:var(--panel); color:var(--fg); cursor:pointer; }
+  button.primary { background:var(--brand); border-color:var(--brand-d); color:#fff; font-weight:600; } button:disabled { opacity:.5; cursor:default; }
+  button.sm { padding:4px 9px; font-size:12px; } button.danger { color:var(--err); }
+  .bar { display:flex; gap:10px; align-items:center; margin-top:18px; flex-wrap:wrap; }
+  .tools { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:6px 14px; margin:6px 0; }
+  .tools label { display:flex; gap:7px; align-items:center; font-weight:400; margin:0; cursor:pointer; } .tools input { width:auto; }
+  .grp { font-size:12px; font-weight:600; margin-top:10px; color:var(--muted); }
+  .callout { padding:10px 13px; border-radius:10px; background:var(--code); margin:10px 0; font-size:13px; }
+  .callout.err { background:var(--err-soft); color:var(--err); } .callout.warn { background:var(--warn-soft); } .callout.ok { background:var(--ok-soft); }
+  .lint div { padding:6px 10px; border-radius:8px; margin:4px 0; font-size:13px; } .lint .error { background:var(--err-soft); color:var(--err); } .lint .warn { background:var(--warn-soft); }
+  table { width:100%; border-collapse:collapse; } th { text-align:left; font-size:12px; color:var(--muted); padding:4px 6px; } td { padding:4px 6px; vertical-align:top; }
+  td input { padding:6px 8px; }
+  .diff { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:8px 0; } @media (max-width:800px) { .diff { grid-template-columns:1fr; } }
+  .diff h4 { margin:0 0 4px; font-size:12px; color:var(--muted); }
+  .diff pre { margin:0; padding:8px; background:var(--code); border-radius:8px; font:12px var(--mono); white-space:pre-wrap; word-break:break-word; max-height:360px; overflow:auto; }
+  .diff pre span { display:block; } .diff pre .del { background:var(--err-soft); } .diff pre .add { background:var(--ok-soft); }
+  .term { background:#0c0c0c; color:#d4d4d4; font:12px var(--mono); padding:10px 12px; border-radius:8px; height:240px; overflow:auto; white-space:pre-wrap; word-break:break-word; margin:8px 0; }
+  .term .cur { animation:termblink 1s steps(2,start) infinite; } @keyframes termblink { to { visibility:hidden; } }
+  @media (prefers-reduced-motion: reduce) { .term .cur { animation:none; } }
+  .termstat { font-size:12.5px; color:var(--muted); }
+  .mono { font-family:var(--mono); font-size:12.5px; }
+  .empty { padding:40px 20px; text-align:center; color:var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <img src="/logo_nexsoft_squared-min.webp" alt="">
+  <h1>Editor delle pipeline</h1>
+  <span class="chip" id="proj"></span>
+  <span style="flex:1"></span>
+  <button type="button" id="close-tab">Chiudi questa scheda</button>
+</header>
+<main>
+  <nav id="nav" aria-label="Pipeline e agent"></nav>
+  <section id="panel"><div class="card"><div class="empty">Caricamento…</div></div></section>
+</main>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  async function api(path, body) {
+    const r = await fetch(path, body === undefined ? { cache: 'no-store' } : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    let j = {}; try { j = await r.json(); } catch { /* risposta non JSON */ }
+    if (!r.ok) throw new Error(j.error || ('Errore ' + r.status));
+    return j;
+  }
+  let data = null, cur = null, dirty = false;
+  const BTN = { cancel: 'Annulla' };
+
+  function banner(parent, kind, text) { const c = mk('div', 'callout ' + kind, text); parent.append(c); return c; }
+  function lintBox(items) {
+    const box = mk('div', 'lint');
+    for (const p of items) box.append(mk('div', p.level, (p.level === 'error' ? 'Errore: ' : 'Attenzione: ') + p.msg));
+    return box;
+  }
+  function confirmLeave() { return !dirty || confirm('Hai modifiche non salvate. Vuoi abbandonarle?'); }
+  window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+  $('close-tab').onclick = () => { if (confirmLeave()) { dirty = false; window.close(); } };
+
+  function badge(it) {
+    if (it.errors) return mk('span', 'chip err', it.errors + (it.errors === 1 ? ' errore' : ' errori'));
+    if (it.warnings) return mk('span', 'chip warn', it.warnings + (it.warnings === 1 ? ' avviso' : ' avvisi'));
+    return mk('span', 'chip ok', 'ok');
+  }
+  function renderNav() {
+    const nav = $('nav'); nav.replaceChildren();
+    const add = (title, items, kind) => {
+      nav.append(mk('h2', '', title));
+      if (!items.length) nav.append(mk('div', 'hint', 'Nessuno')), nav.lastChild.style.cssText = 'padding:4px 10px;color:var(--muted);font-size:12px';
+      for (const it of items) {
+        const b = mk('button', 'item' + (cur && cur.kind === kind && cur.name === it.name ? ' cur' : ''));
+        b.type = 'button'; b.append(mk('span', '', it.name), badge(it));
+        b.onclick = () => go({ kind, name: it.name });
+        nav.append(b);
+      }
+    };
+    add('Pipeline (skill)', data.skills, 'skill');
+    add('Agent', data.agents, 'agent');
+    nav.append(mk('h2', '', 'Azioni'));
+    const na = mk('button', 'item' + (cur && cur.kind === 'new' ? ' cur' : ''), '+ Nuovo agent'); na.type = 'button'; na.onclick = () => go({ kind: 'new' }); nav.append(na);
+    const ns = mk('button', 'item' + (cur && cur.kind === 'newskill' ? ' cur' : ''), '+ Nuova skill'); ns.type = 'button'; ns.onclick = () => go({ kind: 'newskill' }); nav.append(ns);
+  }
+  async function load(keep) {
+    data = await api('/api/pipelines');
+    $('proj').textContent = data.project;
+    if (!keep) cur = data.skills.length ? { kind: 'skill', name: (data.marker && data.skills.some((s) => s.name === data.marker.name) ? data.marker.name : data.skills[0].name) } : (data.agents.length ? { kind: 'agent', name: data.agents[0].name } : { kind: 'new' });
+    renderNav();
+    await show();
+  }
+  async function go(target) {
+    if (!confirmLeave()) return;
+    dirty = false; cur = target; renderNav(); await show();
+  }
+  async function show() {
+    const panel = $('panel'); panel.replaceChildren();
+    try {
+      if (cur.kind === 'new') return panel.append(newAgentForm());
+      if (cur.kind === 'newskill') return panel.append(newSkillForm());
+      panel.append(itemForm(await api('/api/pipelines/item?kind=' + encodeURIComponent(cur.kind) + '&name=' + encodeURIComponent(cur.name))));
+    } catch (e) { const c = mk('div', 'card'); banner(c, 'err', e.message); panel.append(c); }
+  }
+
+  /* ---- tool: elenco con avvisi ---- */
+  function toolsPicker(selected) {
+    const box = mk('div');
+    const set = new Set(selected || []);
+    const known = new Set([...data.toolGroups.readOnly, ...data.toolGroups.risky, ...data.toolGroups.web]);
+    const checks = [];
+    const group = (title, list, hint) => {
+      box.append(mk('div', 'grp', title));
+      const g = mk('div', 'tools');
+      for (const t of list) {
+        const l = mk('label'); const c = mk('input'); c.type = 'checkbox'; c.value = t; c.checked = set.has(t); checks.push(c);
+        c.onchange = () => { dirty = true; };
+        l.append(c, mk('span', 'mono', t)); g.append(l);
+      }
+      box.append(g);
+      if (hint) box.append(mk('small', 'hint', hint));
+    };
+    group('Sola lettura', data.toolGroups.readOnly);
+    group('Modificano file o lanciano comandi (da dare solo se servono)', ['Bash', 'Write', 'Edit', 'NotebookEdit']);
+    group('Rete', ['WebFetch', 'WebSearch']);
+    const extra = mk('input'); extra.type = 'text'; extra.placeholder = 'es. mcp__playwright__browser_snapshot';
+    extra.value = [...set].filter((t) => !known.has(t) && !['Bash', 'Write', 'Edit', 'NotebookEdit', 'WebFetch'].includes(t)).join(', ');
+    extra.oninput = () => { dirty = true; };
+    box.append(mk('div', 'grp', 'Altri tool (separati da virgola, ad esempio quelli di un server MCP)'), extra);
+    box.append(mk('small', 'hint', 'Se non ne scegli nessuno l\'agent eredita TUTTI i tool: è sconsigliato.'));
+    box.value = () => [...checks.filter((c) => c.checked).map((c) => c.value), ...extra.value.split(',').map((x) => x.trim()).filter(Boolean)];
+    box.setValue = (arr) => { const s = new Set(arr); for (const c of checks) c.checked = s.has(c.value); extra.value = [...s].filter((t) => !checks.some((c) => c.value === t)).join(', '); };
+    return box;
+  }
+
+  /* ---- "Migliora con Claude": propone la correzione degli errori del file, la applica solo su conferma ---- */
+  function diffPane(title, lines, other, cls) {
+    const wrap = mk('div'); wrap.append(mk('h4', '', title));
+    const pre = mk('pre'); const set = new Set(other);
+    for (const l of lines) pre.append(mk('span', set.has(l) ? '' : cls, l || ' '));
+    wrap.append(pre); return wrap;
+  }
+  function fixBox(it) {
+    if (!it.lint.some((p) => p.level === 'error')) return null;
+    const box = mk('div', 'callout'); box.style.cssText = 'padding:14px 16px;margin:12px 0 0';
+    box.append(mk('b', '', 'Vuoi che Claude sistemi gli errori?'));
+    const go = mk('button', '', 'Migliora con Claude'); go.type = 'button'; go.style.cssText = 'margin:8px 8px 8px 0';
+    const clean = mk('button', '', 'Pulisci'); clean.type = 'button'; clean.style.cssText = 'margin:8px 0'; clean.title = 'Toglie l\'avanzamento o la proposta da questa schermata';
+    const out = mk('div');
+    let curId = null, running = false, epoch = 0;
+    box.append(go, clean, mk('small', 'hint', 'Una sola richiesta a Sonnet, senza tool: usa un po\' della quota del tuo abbonamento Claude. Corregge solo gli errori elencati, parte dal file salvato (non dalle modifiche non salvate qui sopra) e mostra una PROPOSTA: il file cambia solo se premi "Applica la correzione".'), out);
+    // Schermo "terminale": mostra in tempo reale il file che Claude sta scrivendo (interroga il lavoro ogni mezzo secondo).
+    async function watch(id) {
+      const stat = mk('div', 'termstat'), term = mk('pre', 'term'), cur = mk('span', 'cur', '▌');
+      const stop = mk('button', 'sm', 'Annulla'); stop.type = 'button';
+      const head = mk('div', 'bar'); head.style.marginTop = '8px'; head.append(stat, stop);
+      out.replaceChildren(head, term);
+      let cancelled = false;
+      stop.onclick = async () => { cancelled = true; stop.disabled = true; try { await api('/api/pipelines/fix-cancel', { id }); } catch { /* il lavoro è già finito */ } };
+      let last = null;
+      for (;;) {
+        // Il lavoro continua anche se la schermata non è visibile (si passa a un altro file): si ferma solo con "Annulla" o quando finisce.
+        const s = await api('/api/pipelines/fix-status?id=' + encodeURIComponent(id));
+        stat.textContent = s.state === 'running' ? (s.phase === 'writing' ? 'Claude sta scrivendo il file corretto… ' : 'Claude sta leggendo gli errori e preparando la correzione… ') + s.elapsed + ' s' : s.state === 'done' ? 'Controllo la proposta…' : '';
+        if (s.text !== last) {
+          const near = term.scrollHeight - term.scrollTop - term.clientHeight < 40;
+          last = s.text; term.replaceChildren(document.createTextNode(s.text), cur);
+          if (near) term.scrollTop = term.scrollHeight;
+        }
+        if (s.state === 'done') return s.result;
+        if (s.state === 'error') throw new Error(s.error || 'Errore sconosciuto.');
+        if (s.state === 'cancelled' || cancelled) throw new Error('Correzione annullata.');
+        await new Promise((ok) => setTimeout(ok, 500));
+      }
+    }
+    // Segue un lavoro (nuovo, o già in corso sul server) fino alla proposta.
+    const follow = async (id) => {
+      const my = epoch; curId = id; running = true;
+      try {
+        const r = await watch(id);
+        if (!r || my !== epoch) return;
+        out.replaceChildren();
+        banner(out, 'ok', 'Proposta pronta. ' + (r.summary || '') + ' Rileggi le differenze prima di applicarla.');
+        const a = r.original.split('\n'), b = r.proposed.split('\n');
+        const diff = mk('div', 'diff'); diff.append(diffPane('Prima', a, b, 'del'), diffPane('Dopo', b, a, 'add')); out.append(diff);
+        if (r.lint && r.lint.length) out.append(lintBox(r.lint));
+        const bar = mk('div', 'bar'); const ap = mk('button', 'primary', 'Applica la correzione'); ap.type = 'button';
+        const no = mk('button', '', 'Scarta'); no.type = 'button'; bar.append(ap, no); out.append(bar);
+        no.onclick = () => { out.replaceChildren(); api('/api/pipelines/fix-cancel', { id }).catch(() => {}); }; // scartata: non deve ripresentarsi
+        ap.onclick = async () => {
+          if (dirty && !confirm('La correzione sostituisce il file salvato: le modifiche non salvate nel modulo andranno perse. Continuare?')) return;
+          ap.disabled = true;
+          try {
+            const s = await api('/api/pipelines/fix-apply', { kind: it.kind, name: it.name, text: r.proposed, base: r.base });
+            api('/api/pipelines/fix-cancel', { id }).catch(() => {}); // proposta usata: il lavoro si toglie dall'elenco
+            dirty = false; data = await api('/api/pipelines'); renderNav(); await show();
+            const c = $('panel').firstChild;
+            if (c) c.insertBefore(mk('div', 'callout ok', 'Correzione applicata' + (s.backup ? ' · copia precedente in ' + s.backup : '') + '.'), c.children[1]);
+          } catch (e) { ap.disabled = false; banner(out, 'err', e.message); }
+        };
+      } catch (e) { if (my !== epoch) return; out.replaceChildren(); banner(out, 'err', e.message); }
+      if (my === epoch) { go.disabled = false; running = false; }
+    };
+    go.onclick = async () => {
+      go.disabled = true; out.replaceChildren(mk('small', 'hint', 'Avvio di Claude…'));
+      let job;
+      try { job = await api('/api/pipelines/fix', { kind: it.kind, name: it.name }); } catch (e) { out.replaceChildren(); banner(out, 'err', e.message); go.disabled = false; return; }
+      follow(job.id);
+    };
+    clean.onclick = async () => {
+      if (running && !confirm('Claude sta ancora lavorando: pulendo si annulla il lavoro.\n\nContinuare?')) return;
+      epoch++;
+      if (curId) { try { await api('/api/pipelines/fix-cancel', { id: curId }); } catch { /* già finito */ } curId = null; }
+      out.replaceChildren(); go.disabled = false; running = false;
+    };
+    // Cambiando file e tornando (o dopo un F5): se per questo file c'è un lavoro in corso, o una proposta appena pronta, ci si riaggancia.
+    api('/api/pipelines/fix-active?kind=' + encodeURIComponent(it.kind) + '&name=' + encodeURIComponent(it.name)).then((a) => {
+      if (!a || !a.id) return;
+      go.disabled = true; out.replaceChildren(mk('small', 'hint', 'Riaggancio al lavoro di Claude su questo file…'));
+      follow(a.id);
+    }).catch(() => { /* nessun lavoro da riagganciare */ });
+    return box;
+  }
+
+  /* ---- skill / agent esistente ---- */
+  function itemForm(it) {
+    const card = mk('div', 'card');
+    card.append(mk('h3', '', (it.kind === 'skill' ? 'Pipeline · ' : 'Agent · ') + it.name));
+    const sub = mk('p', 'sub'); sub.append('File: ', Object.assign(mk('span', 'mono'), { textContent: it.file })); card.append(sub);
+    if (!it.editable) { banner(card, 'err', 'Il frontmatter di questo file ha un formato che il modulo non sa modificare: correggilo a mano nel file oppure prova con "Migliora con Claude".'); card.append(lintBox(it.lint)); const fb = fixBox(it); if (fb) card.append(fb); return card; }
+    card.append(mk('label', 'l', 'Descrizione'));
+    const desc = mk('textarea', 'desc'); desc.value = it.description; desc.oninput = () => { dirty = true; cnt.textContent = desc.value.length + ' / 1024'; }; card.append(desc);
+    const cnt = mk('small', 'hint', it.description.length + ' / 1024'); card.append(cnt);
+    card.append(mk('small', 'hint', it.kind === 'skill' ? 'Dice a Claude cosa fa la pipeline e quando lanciarla: scrivila in modo che si capisca da sola.' : 'Dice all\'orchestratore quando delegare a questo agent: cosa fa e cosa restituisce.'));
+    let tp = null, model = null;
+    if (it.kind === 'agent') {
+      card.append(mk('label', 'l', 'Tool consentiti'));
+      tp = toolsPicker(it.tools); card.append(tp);
+      card.append(mk('label', 'l', 'Modello'));
+      model = mk('select');
+      for (const m of ['', ...data.models]) { const o = mk('option', '', m || '(predefinito)'); o.value = m; model.append(o); }
+      model.value = it.model || ''; model.onchange = () => { dirty = true; }; card.append(model);
+      card.append(mk('small', 'hint', 'Per i compiti ordinari basta "sonnet". "opus" consuma molta più quota: usalo solo per ragionamento complesso.'));
+    }
+    card.append(mk('label', 'l', 'Istruzioni'));
+    const body = mk('textarea', 'code'); body.value = it.body; body.spellcheck = false; body.oninput = () => { dirty = true; }; card.append(body);
+    const lintHolder = mk('div'); lintHolder.append(lintBox(it.lint)); card.append(lintHolder);
+    const fb = fixBox(it); if (fb) card.append(fb);
+    const bar = mk('div', 'bar'); const save = mk('button', 'primary', 'Salva'); save.type = 'button'; bar.append(save);
+    const msg = mk('span', 'hint'); bar.append(msg); card.append(bar);
+    save.onclick = async () => {
+      save.disabled = true; msg.textContent = 'Salvataggio…';
+      try {
+        const r = await api('/api/pipelines/save', { kind: it.kind, name: it.name, description: desc.value, body: body.value, ...(it.kind === 'agent' ? { tools: tp.value(), model: model.value } : {}) });
+        dirty = false; msg.textContent = 'Salvato' + (r.backup ? ' · copia precedente in ' + r.backup : '') + '.';
+        lintHolder.replaceChildren(lintBox(r.lint));
+        data = await api('/api/pipelines'); renderNav();
+      } catch (e) { msg.textContent = ''; lintHolder.replaceChildren(); banner(lintHolder, 'err', e.message); }
+      save.disabled = false;
+    };
+    card.append(it.kind === 'skill' ? stepsSection(it.name) : linkSection(it.name));
+    return card;
+  }
+
+  /* ---- nuovo agent ---- */
+  const TEMPLATE = 'Sei un agent della pipeline. Rispondi in italiano.\n\nLeggi prima `.claude/project-profile.md`. Valori `TBD` necessari: segnalali, non assumerli.\n\n## Compito\n\nDescrivi che cosa deve fare, cosa riceve in ingresso e cosa deve restituire.\n';
+  function newAgentForm() {
+    const card = mk('div', 'card');
+    card.append(mk('h3', '', 'Nuovo agent'), mk('p', 'sub', 'Un agent svolge un compito circoscritto per conto della pipeline. Parte con i soli tool che scegli.'));
+    const ai = mk('div', 'callout'); ai.style.cssText = 'padding:14px 16px;margin:0 0 6px';
+    ai.append(mk('b', '', 'Vuoi che lo scriva Claude?'));
+    const req = mk('textarea', 'desc'); req.placeholder = 'Descrivi in italiano cosa deve fare l\'agent, es. "Rivede il ticket prima dell\'analisi e segnala ambiguità, criteri di accettazione mancanti e dati di test non chiari."'; req.style.margin = '8px 0';
+    const gen = mk('button', '', 'Fai scrivere a Claude'); gen.type = 'button';
+    const aiMsg = mk('div');
+    ai.append(req, gen, mk('small', 'hint', 'Una sola richiesta a Sonnet, senza tool: usa un po\' della quota del tuo abbonamento Claude. Genera una BOZZA nel modulo qui sotto: non salva nulla finché non premi "Crea l\'agent", e va sempre riletta.'), aiMsg);
+    card.append(ai);
+    card.append(mk('label', 'l', 'Nome'));
+    const name = mk('input'); name.type = 'text'; name.placeholder = 'es. ticket-reviewer'; name.oninput = () => { dirty = true; }; card.append(name);
+    card.append(mk('small', 'hint', 'Minuscole, numeri e trattini. Il nome del file sarà <nome>.md in .claude/agents.'));
+    card.append(mk('label', 'l', 'Descrizione'));
+    const desc = mk('textarea', 'desc'); desc.oninput = () => { dirty = true; }; card.append(desc);
+    card.append(mk('small', 'hint', 'Cosa fa e quando l\'orchestratore deve delegarglielo.'));
+    card.append(mk('label', 'l', 'Tool consentiti'));
+    const tp = toolsPicker(['Read', 'Grep', 'Glob']); card.append(tp);
+    card.append(mk('label', 'l', 'Modello'));
+    const model = mk('select'); for (const m of data.models) { const o = mk('option', '', m); o.value = m; model.append(o); } model.value = 'sonnet'; card.append(model);
+    card.append(mk('label', 'l', 'Istruzioni'));
+    const body = mk('textarea', 'code'); body.value = TEMPLATE; body.spellcheck = false; body.oninput = () => { dirty = true; }; card.append(body);
+    let addStep = null, stepLabel = null;
+    gen.onclick = async () => {
+      gen.disabled = true; aiMsg.replaceChildren(mk('small', 'hint', 'Claude sta scrivendo la bozza… può richiedere fino a un minuto.'));
+      try {
+        const d = await api('/api/pipelines/draft', { description: req.value });
+        name.value = d.name; desc.value = d.description; tp.setValue(d.tools); model.value = d.model; body.value = d.body; dirty = true;
+        aiMsg.replaceChildren();
+        banner(aiMsg, 'ok', 'Bozza pronta: rileggi nome, descrizione, tool e istruzioni, correggi quello che serve e poi premi "Crea l\'agent".');
+        if (d.lint && d.lint.length) aiMsg.append(lintBox(d.lint));
+      } catch (e) { aiMsg.replaceChildren(); banner(aiMsg, 'err', e.message); }
+      gen.disabled = false;
+    };
+    const res = mk('div'); card.append(res);
+    const bar = mk('div', 'bar'); const create = mk('button', 'primary', 'Crea l\'agent'); create.type = 'button'; bar.append(create); card.append(bar);
+    create.onclick = async () => {
+      create.disabled = true; res.replaceChildren();
+      try {
+        const r = await api('/api/pipelines/agent', { name: name.value.trim(), description: desc.value, tools: tp.value(), model: model.value, body: body.value, addStep: !!(addStep && addStep.checked), stepLabel: stepLabel ? stepLabel.value : '' });
+        dirty = false; data = await api('/api/pipelines'); cur = { kind: 'agent', name: r.name }; renderNav(); await show();
+        const c = $('panel').firstChild; if (c) { const ok = mk('div', 'callout ok', 'Agent creato. Ora collegalo a una skill con la sezione qui sotto: finché nessuna skill lo cita, non verrà mai chiamato.'); c.insertBefore(ok, c.children[1]); }
+      } catch (e) { banner(res, 'err', e.message); }
+      create.disabled = false;
+    };
+    return card;
+  }
+
+  /* ---- nuova skill ---- */
+  const SKILL_TEMPLATE = '# nome-della-skill\n\nDescrivi in breve cosa fa questa skill.\n\n## Input\n\nCosa riceve (es. un ticket). Se manca, chiedilo una volta e fermati.\n\n## Step 0 — Profilo\n\nLeggi `.claude/project-profile.md`. Se un valore necessario è `TBD`, chiedilo all\'utente e non assumerlo.\n\n## Step 1 — Da definire\n\nDescrivi il primo passo. Se può farlo uno degli agent del progetto, delegalo a quell\'agent per nome.\n\n## Regole\n\nChiedi conferma prima di ogni mossa ambigua o distruttiva. Mai commit, push o PR senza richiesta esplicita.\n';
+  function newSkillForm() {
+    const card = mk('div', 'card');
+    card.append(mk('h3', '', 'Nuova skill'), mk('p', 'sub', 'Una skill è un flusso di lavoro che lanci dalla chat con /nome. Può chiamare gli agent del progetto per svolgere i singoli passi.'));
+    const ai = mk('div', 'callout'); ai.style.cssText = 'padding:14px 16px;margin:0 0 6px';
+    ai.append(mk('b', '', 'Vuoi che la scriva Claude?'));
+    const req = mk('textarea', 'desc'); req.placeholder = 'Descrivi in italiano cosa deve fare la skill, es. "Prende un ticket, ne verifica la completezza con l\'agent ticket-reviewer e prepara le domande da fare al product owner."'; req.style.margin = '8px 0';
+    const gen = mk('button', '', 'Fai scrivere a Claude'); gen.type = 'button';
+    const aiMsg = mk('div');
+    ai.append(req, gen, mk('small', 'hint', 'Una sola richiesta a Sonnet, senza tool: usa un po\' della quota del tuo abbonamento Claude. Genera una BOZZA nel modulo qui sotto: non salva nulla finché non premi "Crea la skill", e va sempre riletta.'), aiMsg);
+    card.append(ai);
+    card.append(mk('label', 'l', 'Nome'));
+    const name = mk('input'); name.type = 'text'; name.placeholder = 'es. revisione-ticket'; name.oninput = () => { dirty = true; }; card.append(name);
+    card.append(mk('small', 'hint', 'Minuscole, numeri e trattini. La lanci con /nome. Viene creata in .claude/skills/<nome>/SKILL.md.'));
+    card.append(mk('label', 'l', 'Descrizione'));
+    const desc = mk('textarea', 'desc'); desc.oninput = () => { dirty = true; }; card.append(desc);
+    card.append(mk('small', 'hint', 'Cosa fa e quando va usata: Claude la legge per decidere se proporla.'));
+    card.append(mk('label', 'l', 'Cosa si passa alla skill (facoltativo)'));
+    const hint = mk('input'); hint.type = 'text'; hint.placeholder = 'es. <ticket>'; hint.oninput = () => { dirty = true; }; card.append(hint);
+    card.append(mk('label', 'l', 'Istruzioni'));
+    const body = mk('textarea', 'code'); body.value = SKILL_TEMPLATE; body.spellcheck = false; body.oninput = () => { dirty = true; }; card.append(body);
+    gen.onclick = async () => {
+      gen.disabled = true; aiMsg.replaceChildren(mk('small', 'hint', 'Claude sta scrivendo la bozza… può richiedere fino a un minuto.'));
+      try {
+        const d = await api('/api/pipelines/draft-skill', { description: req.value });
+        name.value = d.name; desc.value = d.description; hint.value = d.argumentHint; body.value = d.body; dirty = true;
+        aiMsg.replaceChildren();
+        banner(aiMsg, 'ok', 'Bozza pronta: rileggi nome, descrizione e istruzioni, controlla che gli agent citati esistano e poi premi "Crea la skill".');
+        if (d.lint && d.lint.length) aiMsg.append(lintBox(d.lint));
+      } catch (e) { aiMsg.replaceChildren(); banner(aiMsg, 'err', e.message); }
+      gen.disabled = false;
+    };
+    const res = mk('div'); card.append(res);
+    const bar = mk('div', 'bar'); const create = mk('button', 'primary', 'Crea la skill'); create.type = 'button'; bar.append(create); card.append(bar);
+    create.onclick = async () => {
+      create.disabled = true; res.replaceChildren();
+      try {
+        const r = await api('/api/pipelines/skill', { name: name.value.trim(), description: desc.value, argumentHint: hint.value, body: body.value });
+        dirty = false; data = await api('/api/pipelines'); cur = { kind: 'skill', name: r.name }; renderNav(); await show();
+        const c = $('panel').firstChild; if (c) c.insertBefore(mk('div', 'callout ok', 'Skill creata: la lanci dalla chat con /' + r.name + '.'), c.children[1]);
+      } catch (e) { banner(res, 'err', e.message); }
+      create.disabled = false;
+    };
+    return card;
+  }
+
+  /* ---- step nella barra di avanzamento (per skill, salvati nel progetto) ---- */
+  const SOURCES = {
+    project: 'Salvati nel progetto (.claude/pipeline-steps.json): viaggiano con il repository.',
+    marker: 'Definiti alla creazione della pipeline. Se li salvi da qui passano nel file degli step del progetto.',
+    global: 'Presi dal file dello strumento (ui/skill-steps.json), uguale per tutti i progetti. Se li salvi da qui li copi nel progetto: da quel momento valgono quelli del progetto e il file dello strumento non viene toccato.',
+    kit: 'Questa pipeline usa gli step del kit: non si modificano da qui.',
+    none: 'Nessuno step definito: durante l\'esecuzione la barra di avanzamento non mostrerà tappe. Aggiungine per averle.',
+  };
+  function stepsSection(skill) {
+    const sec = mk('div'); sec.style.cssText = 'margin-top:28px;padding-top:18px;border-top:1px solid var(--line)';
+    sec.append(mk('h3', '', 'Step nella barra di avanzamento'));
+    sec.firstChild.style.fontSize = '15px';
+    const holder = mk('div'); sec.append(holder);
+    holder.append(mk('small', 'hint', 'Caricamento…'));
+    const draw = (st) => {
+      holder.replaceChildren();
+      holder.append(mk('p', 'sub', 'Sono le tappe mostrate durante l\'esecuzione. Ogni step si accende quando la skill chiama uno degli agent (o delle skill) indicati. ' + (SOURCES[st.source] || '')));
+      if (!st.editable) return;
+      const steps = st.steps.map((s) => ({ id: s.id, label: s.label || '', desc: s.desc || '', agents: (s.agents || []).join(', '), skills: (s.skills || []).join(', ') }));
+      const wrap = mk('div'); holder.append(wrap);
+      const dl = mk('datalist'); dl.id = 'agent-list-' + skill; for (const a of data.agents) { const o = mk('option'); o.value = a.name; dl.append(o); } holder.append(dl);
+      const redraw = () => {
+        const t = mk('table'); const h = mk('tr'); for (const x of ['Id', 'Nome', 'Descrizione', 'Agent (virgola)', 'Skill (virgola)', '']) h.append(mk('th', '', x)); t.append(h);
+        steps.forEach((s, i) => {
+          const r = mk('tr');
+          const f = (key, ph) => { const td = mk('td'); const e = mk('input'); e.type = 'text'; e.value = s[key]; e.placeholder = ph || ''; e.oninput = () => { s[key] = e.value; dirty = true; }; if (key === 'agents') e.setAttribute('list', 'agent-list-' + skill); td.append(e); return td; };
+          const act = mk('td'); act.style.whiteSpace = 'nowrap';
+          const mv = (d) => { const j = i + d; if (j < 0 || j >= steps.length) return; [steps[i], steps[j]] = [steps[j], steps[i]]; dirty = true; redraw(); };
+          const up = mk('button', 'sm', '↑'), dn = mk('button', 'sm', '↓'), rm = mk('button', 'sm danger', 'Rimuovi');
+          for (const b of [up, dn, rm]) b.type = 'button';
+          up.onclick = () => mv(-1); dn.onclick = () => mv(1); rm.onclick = () => { steps.splice(i, 1); dirty = true; redraw(); };
+          act.append(up, ' ', dn, ' ', rm);
+          r.append(f('id', 'es. analisi'), f('label', 'es. 1 Analisi'), f('desc', ''), f('agents', 'es. mio-agent'), f('skills', 'es. run-test'), act); t.append(r);
+        });
+        wrap.replaceChildren(t);
+      };
+      redraw();
+      const add = mk('button', 'sm', 'Aggiungi step'); add.type = 'button'; add.style.marginTop = '8px';
+      add.onclick = () => { steps.push({ id: '', label: '', desc: '', agents: '', skills: '' }); dirty = true; redraw(); }; holder.append(add);
+      const res = mk('div'); holder.append(res);
+      const bar = mk('div', 'bar'); const save = mk('button', 'primary', 'Salva gli step'); save.type = 'button'; bar.append(save);
+      const toList = (v) => v.split(',').map((x) => x.trim()).filter(Boolean);
+      const send = async (list) => api('/api/pipelines/skill-steps', { skill, steps: list.map((s) => ({ id: s.id.trim(), label: s.label, desc: s.desc, agents: toList(s.agents), skills: toList(s.skills) })) });
+      save.onclick = async () => {
+        save.disabled = true; res.replaceChildren();
+        try {
+          const r = await send(steps); dirty = false; draw(r);
+          banner(holder, 'ok', 'Step salvati nel progetto' + (r.backup ? ' · copia precedente in ' + r.backup : '') + '. La barra li usa dalla prossima esecuzione.');
+        } catch (e) { banner(res, 'err', e.message); save.disabled = false; }
+      };
+      if (st.source === 'project' || st.source === 'marker') {
+        const rs = mk('button', '', 'Ripristina i predefiniti'); rs.type = 'button'; bar.append(rs);
+        rs.onclick = async () => {
+          if (!confirm('Rimuovere gli step salvati nel progetto per questa skill? Tornano quelli predefiniti (file dello strumento o kit).')) return;
+          try { const r = await send([]); dirty = false; draw(r); } catch (e) { banner(res, 'err', e.message); }
+        };
+      }
+      holder.append(bar);
+    };
+    api('/api/pipelines/steps?skill=' + encodeURIComponent(skill)).then(draw).catch((e) => { holder.replaceChildren(); banner(holder, 'err', e.message); });
+    return sec;
+  }
+
+  /* ---- collegare un agent a una skill (proposta da approvare) ---- */
+  function linkSection(agent) {
+    const sec = mk('div'); sec.style.cssText = 'margin-top:28px;padding-top:18px;border-top:1px solid var(--line)';
+    sec.append(mk('h3', '', 'Usa questo agent in una skill'));
+    sec.firstChild.style.fontSize = '15px';
+    sec.append(mk('p', 'sub', 'Un agent viene chiamato solo se una skill lo cita. Scegli la skill: ti propongo il passaggio da aggiungere e lo salvo solo dopo la tua approvazione.'));
+    if (!data.skills.length) { sec.append(mk('small', 'hint', 'Il progetto non ha ancora skill: creane una con "+ Nuova skill".')); return sec; }
+    const row = mk('div', 'bar'); row.style.marginTop = '0';
+    const sel = mk('select'); sel.style.width = 'auto'; sel.style.minWidth = '220px';
+    for (const s of data.skills) { const o = mk('option', '', s.name); o.value = s.name; sel.append(o); }
+    const prop = mk('button', '', 'Proponi il passaggio'); prop.type = 'button';
+    row.append(sel, prop); sec.append(row);
+    const out = mk('div'); sec.append(out);
+    prop.onclick = async () => {
+      prop.disabled = true; out.replaceChildren();
+      try {
+        const pv = await api('/api/pipelines/link-preview?skill=' + encodeURIComponent(sel.value) + '&agent=' + encodeURIComponent(agent));
+        if (pv.alreadyMentioned) banner(out, 'warn', 'La skill "' + sel.value + '" cita già questo agent: controlla di non duplicare il passaggio.');
+        out.append(mk('label', 'l', 'Passaggio proposto (puoi modificarlo)'));
+        const ta = mk('textarea', 'code'); ta.style.minHeight = '130px'; ta.value = pv.text; ta.spellcheck = false; out.append(ta);
+        out.append(mk('label', 'l', 'Dove inserirlo'));
+        const where = mk('select');
+        pv.headings.forEach((h, i) => { const o = mk('option', '', 'Dopo la sezione "' + h + '"'); o.value = String(i); where.append(o); });
+        const end = mk('option', '', 'In fondo alla skill'); end.value = 'end'; where.append(end);
+        where.value = String(pv.defaultAfter); out.append(where);
+        let ck = null, lab = null;
+        if (pv.canAddStep) {
+          const l = mk('label'); l.style.cssText = 'display:flex;gap:8px;align-items:center;margin-top:14px;font-weight:400';
+          ck = mk('input'); ck.type = 'checkbox'; ck.checked = true; ck.style.width = 'auto';
+          l.append(ck, 'Aggiungi anche uno step nella barra di avanzamento di "' + sel.value + '"'); out.append(l);
+          lab = mk('input'); lab.type = 'text'; lab.value = pv.stepLabel; lab.style.marginTop = '8px'; out.append(lab);
+        }
+        const msg = mk('div'); out.append(msg);
+        const bar = mk('div', 'bar'); const ok = mk('button', 'primary', 'Approva e salva nella skill'); ok.type = 'button'; bar.append(ok); out.append(bar);
+        ok.onclick = async () => {
+          ok.disabled = true; msg.replaceChildren();
+          try {
+            const r = await api('/api/pipelines/link', { skill: sel.value, agent, text: ta.value, after: where.value === 'end' ? 'end' : Number(where.value), addStep: !!(ck && ck.checked), stepLabel: lab ? lab.value : '' });
+            data = await api('/api/pipelines'); renderNav();
+            banner(msg, 'ok', 'Passaggio aggiunto alla skill "' + sel.value + '"' + (r.stepAdded ? ' e step "' + r.stepAdded.label + '" aggiunto alla barra' : '') + (r.backup ? ' · copia precedente in ' + r.backup : '') + '.');
+          } catch (e) { banner(msg, 'err', e.message); ok.disabled = false; }
+        };
+      } catch (e) { banner(out, 'err', e.message); }
+      prop.disabled = false;
+    };
+    return sec;
+  }
+
+  load().catch((e) => {
+    $('panel').replaceChildren(); const c = mk('div', 'card'); banner(c, 'err', e.message + (/progetto/i.test(e.message) ? '' : ' Riapri questa pagina dalla scheda Progetto del Cockpit.')); $('panel').append(c);
+  });
+})();
+</script>
+</body>
+</html>
