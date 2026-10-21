@@ -7,9 +7,11 @@ Il "cockpit" da cui si pilota lo sviluppo di test automatici (framework Aletheia
 
 ## Avvio
 
-- Doppio clic su `NexsoftAutomationCockpit.exe` (apre il server e il browser su http://127.0.0.1:4173/), oppure
-- da terminale, in questa cartella: `node ui\server.js`
-- **dal repository** (dopo `git clone`): `npm start`, oppure costruisci l'eseguibile una volta con `npm run exe` (serve solo Windows, usa il compilatore già presente) e poi doppio clic su `NexsoftAutomationCockpit.exe`: nel repository avvia `src\server\main.js`, nel pacchetto `ui\server.js`. L'exe non è nel repository (file binario): ogni clone lo costruisce con `npm run exe`. `npm run test:exe` ne verifica l'avvio.
+- **Dal pacchetto** (quello che ricevi): doppio clic su `NexsoftAutomationCockpit.exe`. Apre il server e il browser su http://127.0.0.1:4173/.
+- **Da terminale**, nella cartella del pacchetto: `node ui\server.js`.
+- **Dal repository** (dopo `git clone`): `npm start`, oppure costruisci l'eseguibile una volta con `npm run exe` (solo Windows, usa il compilatore già presente) e poi doppio clic: nel repository avvia `src\server\main.js`, nel pacchetto `ui\server.js`. L'exe non è nel repository (file binario): ogni clone lo costruisce.
+
+Aprendo l'app vedrai in Gestione attività **più processi `node`** (uno principale e otto di servizio): è normale, e si fermano tutti insieme quando chiudi l'app (anche se il principale cade). Usano più memoria di un processo unico (circa 560 MB contro 120 MB). Se qualcosa non funziona, puoi avviare tutto in un solo processo con la variabile `NACP_INPROC=1`.
 
 Per chiudere usa il pulsante **Chiudi** nel menu laterale.
 
@@ -44,6 +46,7 @@ La UI pilota un agente con accesso al repository, quindi l'accesso è protetto:
 - Ogni avvio genera una **chiave di sessione** (256 bit). `NexsoftAutomationCockpit.exe` la legge da `%APPDATA%\developerTest-UI\session-<porta>.json` e apre il browser su `/?t=<chiave>`; il server la mette in un cookie **HttpOnly, SameSite=Strict** e la toglie dall'indirizzo. Senza chiave tutte le pagine e le API rispondono 401. Avviando `node ui/server.js` a mano, l'indirizzo completo è stampato in console.
 - Richieste da un'altra origine (altre pagine web) o con un host diverso (DNS rebinding) sono rifiutate.
 - Intestazioni di sicurezza su ogni risposta e **CSP con nonce**: nessuno script inline non autorizzato, nessun frame, connessioni solo verso il server stesso.
+- Le parti dell'app (i servizi) parlano con il processo principale su **pipe con nome**, senza aprire porte di rete, con un nome casuale e un token diverso a ogni avvio.
 - Il server ascolta solo su 127.0.0.1. `UI_AUTH=off` esiste solo per i test automatici e stampa un avviso.
 
 ## Licenze e profili
@@ -64,14 +67,14 @@ I permessi sono applicati dal server a ogni richiesta (una funzione nuova nasce 
 
 | Cartella | Contenuto |
 |---|---|
-| `ui\` | server e interfaccia (nessuna dipendenza da installare) |
+| `ui\` | l'applicazione (server unito e offuscato, servizi in `ui\services\`, pagine in `ui\public\`) |
 | `kit\.claude\` | agent e skill della pipeline: sono la **fonte unica** e vengono copiati nei progetti ("Prepara il progetto") |
 | `ui\templates\` | template del progetto generato dal wizard |
 
 ## Note
 
 - Per cambiare agent o skill modifica `kit\.claude\`, poi usa "Prepara il progetto" sui progetti che devono riceverli (non sovrascrive i file già presenti).
-- Lo stato locale (progetto agganciato, recenti, origini Git salvate, repository Maven del framework) è in `%APPDATA%\developerTest-UI\active-project.json` (per utente, fuori dal kit).
+- Lo stato locale (progetto agganciato, recenti, preferenze per progetto, repository Maven del framework) è in `%APPDATA%\developerTest-UI\active-project.json`; le origini Git salvate sono in `sources.json` nella stessa cartella (per utente, fuori dal kit). Le origini di una versione precedente vengono migrate da sole al primo uso.
 - Cartella di lavoro predefinita per clone e nuovi progetti: `%USERPROFILE%\IdeaProjects` (variabile `UI_WORKSPACE` per cambiarla). Porta: `UI_PORT`.
 - **Origini Git:** nella scheda Progetto scegli GitHub (organizzazione o utente) oppure GitLab (server + gruppo, anche sottogruppi). All'avvio **nessuna origine è collegata** e l'app non ne deduce dai progetti presenti sul computer: quelle che aggiungi restano salvate e si ricollegano con un clic ("Collega"), si scollegano con "Scollega", si eliminano con il cestino. L'elenco usa le credenziali già salvate da Git (Credential Manager); non vengono mai salvate né mostrate. Per GitLab possono servire credenziali con il permesso `read_api`; se il server usa una CA aziendale, deve essere nell'archivio certificati di Windows.
 - **Jira Cloud:** all'avvio Jira è **scollegato**. La connessione salvata (email + API token, cifrato con Windows DPAPI in `%APPDATA%\developerTest-UI\jira.json`, fuori da qualsiasi repository) si riattiva con **Riconnetti**; "Scollega" la disattiva senza cancellarla, il cestino la dimentica. Le credenziali già presenti in Gestione credenziali di Windows si cercano solo se premi il pulsante dedicato e si leggono ogni volta da Windows (nessuna copia). Le query salvate sono personali e compaiono solo a Jira collegato. Ciò che è configurato viene **verificato** quando lo riconnetti.
@@ -80,57 +83,28 @@ I permessi sono applicati dal server a ogni richiesta (una funzione nuova nasce 
 - **Nuovo progetto:** il wizard chiede anche il **repository Maven del framework** (indirizzo `https://…` che ti dà il team che lo gestisce): l'app lo ricorda per i prossimi progetti (variabile `UI_FRAMEWORK_REPO` per forzarlo) e lo scrive nel `pom.xml` e nel profilo.
 - **Server MCP:** dopo l'aggiunta di un server la UI propone di configurarlo. Nella scheda **Credenziali e scheda…** imposti le variabili richieste (cifrate con DPAPI, mai nel repository né nel `.mcp.json`) e puoi creare una **scheda** per usare i suoi tool dalla UI, scritta da Claude (una richiesta a Sonnet) o semplice. La scheda è un file di dati, non codice. I tool che possono modificare dati chiedono sempre conferma. Sono gestiti solo i server locali (stdio).
 - **Editor pipeline:** da Progetto → **Modifica pipeline e agent…** si modificano skill e agent del progetto (controlli secondo le convenzioni di Claude Code, copia di sicurezza in `.tmp\pipeline-backup\`), se ne creano di nuovi anche con la bozza di Claude, si collega un agent a una skill con proposta da approvare e si definiscono gli step mostrati nell'avanzamento (salvati nel progetto, in `.claude\pipeline-steps.json`).
-- Per ricompilare l'eseguibile (`NexsoftAutomationCockpit.exe`): `powershell -File ui\build-exe.ps1`.
+- Per ricompilare l'eseguibile (`NexsoftAutomationCockpit.exe`): `powershell -File ui\build-exe.ps1` (nel pacchetto) oppure `npm run exe` (nel repository).
 
-## Sviluppo
+## Per chi sviluppa
 
 Il prodotto gira solo con Node (nessuna dipendenza a runtime). `npm install` serve solo per costruire il pacchetto (esbuild e javascript-obfuscator).
 
 | Comando | Cosa fa |
 |---|---|
-| `npm start` | avvia il server dai sorgenti |
-| `npm test` | unit (mascheramento segreti), flow (finestre in diretta, Demo/Jira), prova di fumo |
-| `npm run dist` | costruisce `.tmp/dist/NexsoftAutomationCockpit` (backend unito e offuscato) |
+| `npm start` | avvia l'app dai sorgenti (con i servizi) |
+| `npm run exe` | compila `NexsoftAutomationCockpit.exe` |
+| `npm test` | tutta la suite: unit, flow e prova di fumo, con i servizi attivi |
+| `npm run test:inproc` | stessa suite con tutto in un solo processo |
+| `npm run dist` | costruisce `.tmp/dist/NexsoftAutomationCockpit` (backend unito e offuscato, un file per processo) |
 | `npm run dist:zip` | come sopra e crea `.tmp/NexsoftAutomationCockpit.zip` (serve Python) |
-| `npm run test:dist -- .tmp/dist/NexsoftAutomationCockpit` | prova di fumo sul pacchetto costruito |
+| `npm run test:dist -- .tmp/dist/NexsoftAutomationCockpit` | la suite sul pacchetto costruito (o su uno zip estratto) |
+| `npm run test:exe` | prova che l'exe avvia il server e lo chiude senza processi rimasti |
 
-I test preparano da soli licenza di prova (chiave creata al volo), progetto, finto Jira, finto server MCP e finto `claude` in `.tmp/test`. Non toccano i dati reali in `%APPDATA%`.
+I test preparano da soli licenza di prova, progetto e finti Jira, MCP e `claude` in `.tmp/test`: non toccano i dati reali in `%APPDATA%`.
 
-### Struttura del repository
+### Come è fatta, in breve
 
-```
-src/server/main.js        gateway: server HTTP, controlli comuni (accesso, permessi), smistamento alle aree
-src/server/http/          auth.js (token, cookie, Origin/Host), caps.js (permessi per rotta), static.js, route.js
-src/server/gateway/       system.js: rotte che mettono insieme più aree (versione, diagnostica, IDE, chiusura)
-src/server/gateway/remote.js   aree che girano come servizi separati: avvio, inoltro, controlli (default: jira, tools, pipelines, git, mcp, repos, project, session)
-src/server/supervisor.js    avvia i servizi come processi figli, li controlla e li riavvia se cadono
-src/server/service-host.js  espone su pipe con nome le rotte di un'area; service-entries/<area>.js è il punto d'ingresso del processo
-src/server/state.js       stato per utente (progetto agganciato, recenti, origini, scelte) salvato in %APPDATA%
-src/server/infra/         paths.js (cartelle e dati), claude.js (unico punto che lancia claude), proc.js (kill dell'albero)
-src/server/areas/         un'area per ambito, ognuna con interfaccia pubblica (index.js) e le proprie rotte:
-  license/                licenza e profili
-  jira/                   connessione, query e ticket
-  scm/                    git e origini (GitHub/GitLab), clone
-  mcp/                    server MCP del progetto: credenziali, tool, schede, domande a Claude
-  pipelines/              editor di skill e agent
-  project/                progetto attivo, wizard, configurazione, JDK, cambio progetto
-  tools/                  scheda Tool: rilevati, catalogo, registro MCP
-  session/                sessione con claude: processo, eventi SSE, in diretta, permessi, Ask Claude, redact
-  demo/                   modalità Demo e simulatore (sim.js)
-  platform/               versione, report di diagnostica, apertura in IntelliJ
-src/server/assets/        catalog.json, skill-steps.json, version.json, templates/
-src/web/                  index.html (solo markup) + css/app.css + js/*.js (uno per scheda; boot.js per ultimo), pipelines.html, mcp.html
-launcher/                 Launcher.cs e build-exe.ps1 (eseguibile)
-kit/                      skill e agent forniti ai progetti
-build/                    build-dist.js (pacchetto offuscato), zip.py
-test/                     unit, flow, smoke, fixtures (finti Jira, MCP e claude)
-tools/license.js          strumento di chi emette le licenze (la chiave privata non sta nel repository)
-```
+Un **gateway** (l'unica porta verso il browser) controlla accesso e permessi e smista le richieste a **servizi** separati: Jira, Tools, Pipelines, Git, MCP, Repos, Project e Session. Il gateway tiene lo stato dell'app e la licenza e passa ai servizi un contesto (progetto, preferenze, Demo, sessione in corso, permessi) che il browser non può falsificare. Il codice è organizzato in **aree** con confini imposti da un test, in `src/server/areas/`; le pagine sono in `src/web/` (markup, CSS e uno script per scheda).
 
-Gli script della pagina sono script classici che condividono lo stesso ambito globale: in un solo file le funzioni sono disponibili fin dall'inizio, con più file un'istruzione eseguita al caricamento può usare solo ciò che è già stato caricato. Per questo le istruzioni di avvio stanno in `js/boot.js`, l'ultimo script.
-
-Servizi: le aree si possono eseguire come processi separati che comunicano con il gateway tramite **pipe con nome** (HTTP senza porte di rete, nome casuale a ogni avvio, token obbligatorio, diritti limitati all'utente). Oggi girano come servizi **Jira**, **Tools**, **Pipelines** (l'editor di skill e agent) **Git** (stato e operazioni sul progetto) **MCP** (server MCP del progetto: credenziali, tool, schede, domande a Claude; i server MCP avviati sono figli del servizio e si fermano con lui) e **Repos** (origini GitHub/GitLab, elenco dei repository, clone; le origini stanno in `sources.json` e si migrano dal vecchio stato al primo uso; l'aggancio del progetto clonato lo fa il gateway) **Project** (controlli sui file del progetto, wizard, configurazione e accesso a Claude; aggancio, scelta di skill e JDK e creazione restano nel gateway perché cambiano lo stato dell'app) e **Session** (la sessione con `claude`: processo, eventi in diretta, permessi, domande a margine; il gateway sa se una sessione è in corso da un messaggio del servizio, e fermando l'app si ferma anche `claude`). Nel gateway restano la licenza (serve a ogni richiesta), lo stato dell'app e i punti di collegamento tra aree (`gateway/`); il gateway passa a ogni richiesta un **contesto** (progetto agganciato, preferenze, Demo, sessione in corso, permessi del profilo) con un'intestazione che il browser non può falsificare, così i servizi non leggono mai lo stato dell'app; `NACP_SERVICES=` (vuoto) o `NACP_INPROC=1` riportano tutto in un solo processo, e se un servizio non parte l'area resta nel gateway. Se un servizio cade viene riavviato (la Demo viene ripristinata); se il gateway cade, i servizi si chiudono da soli. `npm test` prova la modalità a servizi, `npm run test:inproc` quella a processo unico.
-
-Architettura (imposta da `test/unit/architecture-test.js`): tra aree si importa solo `areas/<area>/index.js` e solo lungo le dipendenze dichiarate nel test; nessun ciclo; le aree non importano il gateway; il nucleo (`infra`, `state`) non importa aree. Una nuova funzione = rotta nell'area giusta + logica nell'area. Le aree sono i punti in cui, se servisse, il server si potrebbe dividere in processi separati.
-
-Regole: chi lancia `claude` usa `infra/claude.js`; percorsi e dati utente passano solo da `infra/paths.js`; un test (`test/unit/caps-test.js`) blocca ogni cambiamento involontario dei permessi per rotta e `test/flow/routes-golden.json` registra stato e messaggi delle rotte.
+- [docs/ARCHITETTURA.md](docs/ARCHITETTURA.md): struttura, aree, servizi, contesto, pipe con nome, regole e come aggiungere una funzione.
+- [docs/MEMORIA-DEL-LAVORO.md](docs/MEMORIA-DEL-LAVORO.md): cronologia di tutto il lavoro svolto, problemi incontrati, limiti noti e cosa resta da fare.
