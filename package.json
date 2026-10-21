@@ -8,6 +8,7 @@
     "test": "node test/run.js all",
     "test:unit": "node test/run.js unit",
     "test:flow": "node test/run.js flow",
+    "test:inproc": "node test/run.js all --inproc",
     "test:smoke": "node test/run.js smoke",
     "dist": "node build/build-dist.js",
     "exe": "powershell -NoProfile -ExecutionPolicy Bypass -File launcher/build-exe.ps1",

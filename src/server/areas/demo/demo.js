@@ -110,9 +110,9 @@ function makeProject(projects) {
 
 function create({ projects, jira }) {
   const made = makeProject(projects);
-  const restore = patchJira(jira);
+  const restore = jira ? patchJira(jira) : () => {}; // senza jira (gira come servizio) la modifica la fa il servizio stesso
   return { dir: made.dir, base: made.base, restore };
 }
 function cleanup(base) { try { fs.rmSync(base, { recursive: true, force: true }); } catch { /* cartella temporanea: il sistema la ripulisce */ } }
 
-module.exports = { SIM, BLOCKED, create, cleanup };
+module.exports = { SIM, BLOCKED, create, cleanup, patchJira };

@@ -13,10 +13,12 @@ const ASSETS_DIR = IN_SOURCE ? path.join(SERVER_DIR, 'assets') : SERVER_DIR; // 
 const WEB_DIR = IN_SOURCE ? path.join(KIT_DIR, 'src', 'web') : path.join(SERVER_DIR, 'public'); // pagine servite al browser
 const SIM_FILE = IN_SOURCE ? path.join(SERVER_DIR, 'areas', 'demo', 'sim.js') : path.join(SERVER_DIR, 'demo', 'sim.js'); // simulatore della modalità Demo (processo a parte)
 const APP_DIR = IN_SOURCE ? path.join(KIT_DIR, 'src') : SERVER_DIR; // cartella su cui si calcola l'impronta della build
+const SERVICES_DIR = IN_SOURCE ? path.join(SERVER_DIR, 'service-entries') : path.join(SERVER_DIR, 'services'); // punti d'ingresso dei servizi (processi separati)
+const serviceEntry = (name) => path.join(SERVICES_DIR, name + '.js');
 const KIT_CLAUDE = path.join(KIT_DIR, 'kit', '.claude'); // skill e agent forniti col Cockpit
 
 // Dati dell'utente (licenza, credenziali cifrate, stato), fuori dal pacchetto. UI_DATA_DIR serve ai test.
 const dataDir = () => process.env.UI_DATA_DIR || path.join(process.env.APPDATA || os.homedir(), 'developerTest-UI');
 const asset = (...parts) => path.join(ASSETS_DIR, ...parts);
 
-module.exports = { KIT_DIR, KIT_CLAUDE, ASSETS_DIR, WEB_DIR, SIM_FILE, APP_DIR, dataDir, asset };
+module.exports = { KIT_DIR, KIT_CLAUDE, ASSETS_DIR, WEB_DIR, SIM_FILE, APP_DIR, SERVICES_DIR, dataDir, asset, serviceEntry };

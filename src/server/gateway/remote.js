@@ -1,0 +1,78 @@
+// Aree che girano come servizi separati (processi figli su pipe con nome). Il gateway controlla accesso e permessi come sempre,
+// poi inoltra le richieste di quelle aree al loro servizio. Se un servizio non parte, l'area resta in-process: l'app non si ferma.
+//   NACP_SERVICES=jira,...   aree da avviare come servizi (default: jira); vuoto oppure NACP_INPROC=1 = tutto in un processo.
+'use strict';
+const fs = require('fs');
+const path = require('path');
+const paths = require('../infra/paths');
+const { createSupervisor } = require('../supervisor');
+const { state } = require('../state');
+
+// area -> prefissi di rotta serviti dal servizio. Un servizio per area (stesso nome).
+const TABLE = {
+  jira: ['/api/jira/'],
+};
+
+function enabledNames() {
+  if (process.env.NACP_INPROC === '1') return [];
+  const raw = process.env.NACP_SERVICES;
+  const list = raw === undefined ? ['jira'] : raw.split(',').map((s) => s.trim()).filter(Boolean);
+  return list.filter((n) => TABLE[n]);
+}
+
+function create({ log = () => {} } = {}) {
+  const names = enabledNames();
+  const live = new Set(); // servizi avviati davvero (gli altri restano in-process)
+  let sup = null;
+
+  const entryOf = (n) => process.env['NACP_SERVICE_ENTRY_' + n.toUpperCase()] || paths.serviceEntry(n); // la variabile serve solo ai test
+  // Dopo ogni (ri)avvio di un servizio gli si ripete lo stato che non vive nel suo processo (la modalità Demo).
+  const onEvent = (e) => {
+    log(e);
+    if (e.type === 'state' && e.state === 'ready' && live.has(e.service) && state.demo) control(e.service, 'demo', { on: true }).catch(() => {});
+  };
+
+  async function start() {
+    if (!names.length) return;
+    const services = {};
+    for (const n of names) {
+      const script = entryOf(n);
+      if (fs.existsSync(script)) services[n] = { script };
+      else log({ type: 'skip', service: n, reason: 'entry non trovata: ' + script });
+    }
+    if (!Object.keys(services).length) return;
+    sup = createSupervisor({ services, onEvent });
+    // un servizio che non parte non ferma l'app: l'area resta in-process
+    for (const n of Object.keys(services)) {
+      try { await sup.start([n]); live.add(n); } catch (e) { log({ type: 'fallback', service: n, error: e.message }); }
+    }
+  }
+
+  const has = (name) => live.has(name);
+  const serviceFor = (url) => {
+    const p = String(url).split('?')[0];
+    for (const n of live) if (TABLE[n].some((pre) => p.startsWith(pre))) return n;
+    return null;
+  };
+  const forward = (name, req, res) => sup.forward(name, req, res);
+  const call = (name, opts) => sup.call(name, opts);
+  // Messaggio di controllo al servizio (es. 'demo'): lo gestisce il suo punto d'ingresso.
+  async function control(name, op, body) {
+    const r = await sup.call(name, { method: 'POST', url: '/_nacp/control/' + op, body: body || {}, waitMs: 8000 });
+    if (r.status !== 200) throw new Error('Il servizio "' + name + '" ha rifiutato "' + op + '": ' + r.body.toString('utf8').slice(0, 200));
+    return JSON.parse(r.body.toString('utf8'));
+  }
+  const broadcast = (op, body) => Promise.all([...live].map((n) => control(n, op, body)));
+  // Come chiamare un'area: via servizio se gira separata, altrimenti con la funzione locale.
+  async function callOr(name, opts, local) {
+    if (!has(name)) return local();
+    const r = await call(name, opts);
+    if (r.status !== 200) throw new Error('Servizio "' + name + '": ' + r.status);
+    return JSON.parse(r.body.toString('utf8'));
+  }
+  const status = () => (sup ? sup.status() : {});
+  const stop = async () => { if (sup) await sup.stop(); live.clear(); };
+  return { start, has, serviceFor, forward, call, control, broadcast, callOr, status, stop, names: () => [...live] };
+}
+
+module.exports = { create, TABLE };

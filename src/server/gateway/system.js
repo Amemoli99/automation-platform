@@ -18,6 +18,7 @@ module.exports = {
     const { req, res, json } = ctx;
     if (req.method === 'GET' && req.url === '/api/license') return json(200, { ...license.current(), inDemo: !!state.demo });
     if (req.method === 'GET' && req.url === '/api/demo') return json(200, { on: !!state.demo });
+    if (req.method === 'GET' && req.url === '/api/services') return json(200, Object.fromEntries(Object.entries(ctx.remote.status()).map(([k, v]) => [k, { state: v.state, pid: v.pid, crashes: v.crashes }])));
     if (req.method === 'GET' && req.url === '/api/diagnostics') return json(200, await config.diagnostics(state.root || projects.KIT, { noProject: !state.root, jdk: state.root ? prefsFor(state.root).jdk : '' }));
     if (req.method === 'GET' && req.url === '/api/diagnostics/export') { // report Markdown per il supporto: nessun segreto (vedi report.js)
       const jdk = state.root ? prefsFor(state.root).jdk : '';
@@ -31,7 +32,7 @@ module.exports = {
         project = { attached: true, name: path.basename(state.root), dir: state.root, skill: pipe && pipe.chosen, args: pipe && pipe.args, steps: pipe ? (pipe.steps ? pipe.steps.length : (pipe.stepsMeaningful ? session.STEPS.length : 0)) : null, jdk, items: (insp && insp.items) || [] };
       }
       const lic = await safe(() => license.current());
-      const jst = await safe(() => jira.publicState());
+      const jst = await safe(() => ctx.remote.callOr('jira', { url: '/api/jira/state' }, () => jira.publicState()));
       const md = report.build({ now: new Date(), app: appinfo.info(), demo: !!state.demo, diag, project, tools: toolsInfo, license: lic, jira: jst && { configured: !!jst.configured, source: jst.source }, session: { status: session.getStatus() } });
       const stamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12);
       res.writeHead(200, { 'Content-Type': 'text/markdown; charset=utf-8', 'Content-Disposition': 'attachment; filename="nacp-diagnostica-' + stamp + '.md"', 'Cache-Control': 'no-store' }).end(md);

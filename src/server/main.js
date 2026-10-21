@@ -15,6 +15,7 @@ const { state, saveState, needRoot } = require('./state');
 const session = require('./areas/session').session;
 const demoMode = require('./areas/demo').mode;
 const { NOT_HANDLED } = require('./http/route');
+const remote = require('./gateway/remote').create({ log: (e) => { if (e.type === 'crash' || e.type === 'failed' || e.type === 'fallback' || e.type === 'skip') console.warn('[servizi]', JSON.stringify(e)); } });
 
 // Aree della API, nell'ordine in cui vengono interrogate. Ognuna espone get(ctx) e post(ctx) e risponde NOT_HANDLED per le rotte che non sono sue.
 const AREAS = [require('./gateway/system'), require('./areas/session/routes'), require('./areas/project/routes'), require('./areas/scm/routes'),
@@ -60,6 +61,7 @@ async function shutdown() {
   await Promise.race([detachIfClean(), new Promise((r) => setTimeout(r, 4000))]);
   auth.removeSession();
   session.stop();
+  await remote.stop();
   mcpclient.closeAll();
   server.close();
   setTimeout(() => process.exit(0), 500);
@@ -87,12 +89,21 @@ const server = http.createServer(async (req, res) => {
   const json = (code, obj) => res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }).end(JSON.stringify(obj));
   if (auth.guard(req, res, json)) return;
 
-  const ctx = { req, res, json, body: null, shutdown };
+  const ctx = { req, res, json, body: null, shutdown, remote };
   try {
     const need = capFor(req.method, req.url);
     if (need) {
       const st = license.current();
       if (!license.allows(st, need, !!state.demo)) return json(403, { error: denyMessage(st, need), code: 'role', role: st.role, need });
+    }
+    // Aree che girano come servizi separati: accesso e permessi sono già stati controllati qui, la richiesta passa com'è alla pipe del servizio.
+    const svcName = remote.serviceFor(req.url);
+    if (svcName && (req.method === 'GET' || req.method === 'POST')) {
+      if (req.method === 'POST') {
+        if (!(req.headers['content-type'] || '').includes('application/json')) return json(415, { error: 'JSON richiesto' });
+        if (state.demo && demo.BLOCKED.has(req.url)) return json(403, { error: 'Non disponibile in modalità Demo: è una simulazione, non modifica nulla di reale.' });
+      }
+      return remote.forward(svcName, req, res);
     }
     if (req.method === 'GET') {
       for (const area of AREAS) { if ((await area.get(ctx)) !== NOT_HANDLED) return; }
@@ -103,7 +114,11 @@ const server = http.createServer(async (req, res) => {
       const body = ctx.body;
       if (req.url === '/api/license/import') return json(200, { ...license.importText(String(body.text || '')), inDemo: !!state.demo });
       if (req.url === '/api/ide/open') { if (state.demo) throw new Error('Non disponibile in modalità Demo: il progetto è una simulazione.'); return json(200, openInIde(needRoot(), body.path, body.line)); }
-      if (req.url === '/api/demo') { if (body.on) demoMode.demoEnter(); else demoMode.demoLeave(); return json(200, { on: !!state.demo }); }
+      if (req.url === '/api/demo') {
+        if (body.on) demoMode.demoEnter(); else demoMode.demoLeave();
+        try { await remote.broadcast('demo', { on: !!state.demo }); } catch (e) { if (body.on) demoMode.demoLeave(); throw e; } // i servizi seguono la modalità
+        return json(200, { on: !!state.demo });
+      }
       if (state.demo && demo.BLOCKED.has(req.url)) return json(403, { error: 'Non disponibile in modalità Demo: è una simulazione, non modifica nulla di reale.' });
       for (const area of AREAS) { if ((await area.post(ctx)) !== NOT_HANDLED) return; }
     }
@@ -116,10 +131,11 @@ const server = http.createServer(async (req, res) => {
 });
 
 process.on('exit', auth.removeSession);
-server.listen(PORT, HOST, () => {
+// Si ascolta solo dopo l'avvio dei servizi (un servizio che non parte lascia l'area in-process: vedi gateway/remote.js).
+remote.start().catch((e) => console.warn('[servizi] avvio non riuscito:', e.message)).then(() => server.listen(PORT, HOST, () => {
   console.log(`Nexsoft Automation Cockpit su http://${HOST}:${PORT}`);
   if (auth.AUTH_ON) {
     auth.writeSession();
     console.log(`Accesso protetto. Se non hai usato NexsoftAutomationCockpit.exe, apri: http://${HOST}:${PORT}/?t=${auth.TOKEN}`);
   } else console.warn('ATTENZIONE: UI_AUTH=off, accesso non protetto (solo per i test).');
-});
+}));

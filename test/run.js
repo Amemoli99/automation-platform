@@ -16,6 +16,8 @@ const TMP = path.join(ROOT, '.tmp', 'test');
 
 const argv = process.argv.slice(2);
 const what = argv.find((a) => !a.startsWith('--')) || 'all';
+const inproc = argv.includes('--inproc'); // tutto in un solo processo (NACP_INPROC=1): via di fuga, deve restare identico
+if (inproc) process.env.NACP_INPROC = '1';
 const distArg = argv.indexOf('--dist') >= 0 ? argv[argv.indexOf('--dist') + 1] : null;
 const ENTRY = distArg ? path.join(path.resolve(distArg), 'ui', 'server.js') : path.join(ROOT, 'src', 'server', 'main.js');
 
@@ -50,6 +52,7 @@ async function startEnv(name, opt = {}) {
 
   const children = [];
   const env = { ...process.env, ...(opt.auth ? { UI_TOKEN: 'token-di-prova-1234567890' } : { UI_AUTH: 'off' }), UI_LICENSE_PUB_PEM: pub, UI_DATA_DIR: data, UI_WORKSPACE: path.join(dir, 'ws'), STUB_LOG: path.join(dir, 'stub-log.json'), ENV_LOG: path.join(dir, 'env-log.json') };
+  Object.assign(env, opt.env || {}); // variabili aggiuntive del singolo scenario
   if (opt.stub) { // il server lancia "claude" con shell:true: su Windows serve un .cmd che richiami il finto
     const cmd = path.join(dir, 'claude.cmd');
     fs.writeFileSync(cmd, '@echo off\r\nnode "' + path.join(FIX, opt.stub) + '" %*\r\n');
@@ -99,6 +102,8 @@ const SUITES = {
     { name: 'pagine e risorse della UI', file: 'test/flow/web-test.js', env: { noProject: true } },
     { name: 'accesso protetto (token, cookie, Origin, Host)', file: 'test/flow/auth-test.js', env: { auth: true, noProject: true }, withToken: true },
     { name: 'permessi concessi e domande a margine', file: 'test/flow/allow-test.js', env: { stub: 'stub_allow_claude.js' }, withLog: true },
+    { name: 'servizi: Jira come processo separato', file: 'test/flow/services-test.js', env: { noProject: true }, args: ['on'], needsServices: true },
+    { name: 'servizi: se non parte, Jira resta in-process', file: 'test/flow/services-test.js', env: { noProject: true, env: { NACP_SERVICE_ENTRY_JIRA: 'C:/non/esiste/jira.js' } }, args: ['fallback'], needsServices: true },
     { name: 'sgancio alla chiusura', file: 'test/flow/detach-test.js', env: {}, withData: true },
     { name: 'rotte del server (stato e messaggi identici al registro)', file: 'test/flow/routes-probe.js', env: { stub: 'stub_live_claude.js' }, withRoot: true },
   ],
@@ -110,11 +115,12 @@ const SUITES = {
   if (groups.some((g) => !SUITES[g])) { console.error('uso: node test/run.js unit|flow|smoke|all [--dist <cartella>]'); process.exit(2); }
   let bad = 0;
   for (const g of groups) for (const t of SUITES[g]) {
+    if (inproc && t.needsServices) continue;
     console.log('\n=== ' + t.name + (distArg ? ' [pacchetto]' : ''));
     if (t.unit) { if (await runNode(path.join(ROOT, t.file), [], {})) bad++; continue; }
     let env;
     try { env = await startEnv(path.basename(t.file, '.js'), t.env); } catch (e) { console.log('  KO  ' + e.message); bad++; continue; }
-    const extra = t.withDir ? [env.dir] : t.withRoot ? [env.root] : t.withToken ? ['token-di-prova-1234567890'] : t.withData ? [env.data, env.root] : t.withLog ? [env.root, env.stubLog] : [];
+    const extra = t.withDir ? [env.dir] : t.withRoot ? [env.root] : t.withToken ? ['token-di-prova-1234567890'] : t.withData ? [env.data, env.root] : t.withLog ? [env.root, env.stubLog] : t.args || [];
     if (argv.includes('--record')) extra.push('--record'); // rigenera il registro delle rotte
     try { if (await runNode(path.join(ROOT, t.file), [env.base, ...extra], {})) bad++; } finally { env.stop(); }
   }

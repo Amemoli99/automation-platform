@@ -18,16 +18,23 @@ function readBody(req) {
 }
 
 // Avvia il servizio e ritorna il server. `routes`: modulo o elenco di moduli di rotte.
-async function runService({ name, routes, pipe, token }) {
+// `controls`: messaggi di controllo del gateway ({ operazione: (corpo) => risposta }), per ciò che non è una rotta (es. attivare la Demo).
+async function runService({ name, routes, pipe, token, controls = {} }) {
   const modules = [].concat(routes);
   const started = Date.now();
   let server = null;
   const shutdown = (code = 0) => { try { server.close(); } catch { /* già chiuso */ } setTimeout(() => process.exit(code), 100); };
   const handler = async (req, res) => {
-    const json = (code, obj) => res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }).end(JSON.stringify(obj));
+    const json = (code, obj) => res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Nacp-Service': name }).end(JSON.stringify(obj));
+    res.setHeader('X-Nacp-Service', name); // il browser (e i test) possono vedere quale servizio ha risposto
     try {
       if (req.method === 'GET' && req.url === '/_nacp/health') return json(200, { ok: true, service: name, pid: process.pid, uptimeMs: Date.now() - started });
       if (req.method === 'POST' && req.url === '/_nacp/shutdown') { json(200, { ok: true }); return shutdown(0); }
+      if (req.method === 'POST' && req.url.startsWith('/_nacp/control/')) {
+        const op = req.url.slice('/_nacp/control/'.length);
+        if (!Object.prototype.hasOwnProperty.call(controls, op)) return json(404, { error: 'Controllo sconosciuto: ' + op });
+        return json(200, (await controls[op](await readBody(req))) || { ok: true });
+      }
       const kind = req.method === 'GET' ? 'get' : req.method === 'POST' ? 'post' : null;
       if (kind) {
         const ctx = { req, res, json, body: kind === 'post' ? await readBody(req) : null, shutdown };

@@ -102,6 +102,9 @@ I test preparano da soli licenza di prova (chiave creata al volo), progetto, fin
 src/server/main.js        gateway: server HTTP, controlli comuni (accesso, permessi), smistamento alle aree
 src/server/http/          auth.js (token, cookie, Origin/Host), caps.js (permessi per rotta), static.js, route.js
 src/server/gateway/       system.js: rotte che mettono insieme più aree (versione, diagnostica, IDE, chiusura)
+src/server/gateway/remote.js   aree che girano come servizi separati: avvio, inoltro, controlli (default: jira)
+src/server/supervisor.js    avvia i servizi come processi figli, li controlla e li riavvia se cadono
+src/server/service-host.js  espone su pipe con nome le rotte di un'area; service-entries/<area>.js è il punto d'ingresso del processo
 src/server/state.js       stato per utente (progetto agganciato, recenti, origini, scelte) salvato in %APPDATA%
 src/server/infra/         paths.js (cartelle e dati), claude.js (unico punto che lancia claude), proc.js (kill dell'albero)
 src/server/areas/         un'area per ambito, ognuna con interfaccia pubblica (index.js) e le proprie rotte:
@@ -125,6 +128,8 @@ tools/license.js          strumento di chi emette le licenze (la chiave privata 
 ```
 
 Gli script della pagina sono script classici che condividono lo stesso ambito globale: in un solo file le funzioni sono disponibili fin dall'inizio, con più file un'istruzione eseguita al caricamento può usare solo ciò che è già stato caricato. Per questo le istruzioni di avvio stanno in `js/boot.js`, l'ultimo script.
+
+Servizi: le aree si possono eseguire come processi separati che comunicano con il gateway tramite **pipe con nome** (HTTP senza porte di rete, nome casuale a ogni avvio, token obbligatorio, diritti limitati all'utente). Oggi gira come servizio **Jira**; `NACP_SERVICES=` (vuoto) o `NACP_INPROC=1` riportano tutto in un solo processo, e se un servizio non parte l'area resta nel gateway. Se un servizio cade viene riavviato (la Demo viene ripristinata); se il gateway cade, i servizi si chiudono da soli. `npm test` prova la modalità a servizi, `npm run test:inproc` quella a processo unico.
 
 Architettura (imposta da `test/unit/architecture-test.js`): tra aree si importa solo `areas/<area>/index.js` e solo lungo le dipendenze dichiarate nel test; nessun ciclo; le aree non importano il gateway; il nucleo (`infra`, `state`) non importa aree. Una nuova funzione = rotta nell'area giusta + logica nell'area. Le aree sono i punti in cui, se servisse, il server si potrebbe dividere in processi separati.
 
