@@ -94,3 +94,25 @@ Il prodotto gira solo con Node (nessuna dipendenza a runtime). `npm install` ser
 | `npm run test:dist -- .tmp/dist/NexsoftAutomationCockpit` | prova di fumo sul pacchetto costruito |
 
 I test preparano da soli licenza di prova (chiave creata al volo), progetto, finto Jira, finto server MCP e finto `claude` in `.tmp/test`. Non toccano i dati reali in `%APPDATA%`.
+
+### Struttura del repository
+
+```
+src/server/main.js        avvio del server HTTP, controlli comuni, smistamento alle aree
+src/server/http/          caps.js (permessi per rotta), auth.js (token, cookie, Origin/Host), static.js (pagine con CSP a nonce)
+src/server/routes/        una area per file: system, run, config, project, repos, git, jira, mcp, pipelines, tools
+src/server/session.js     sessione con claude: processo, eventi SSE, testo e azioni in diretta, permessi, Ask Claude, Demo
+src/server/state.js       stato per utente (progetto agganciato, recenti, origini, scelte) salvato in %APPDATA%
+src/server/services/      logica di dominio senza HTTP: projects, pipelines, jira, git, repos, tools, license, redact, ...
+src/server/infra/         paths.js (cartelle e dati), claude.js (unico punto che lancia claude), proc.js (kill dell'albero)
+src/server/assets/        catalog.json, skill-steps.json, version.json, templates/
+src/server/demo/sim.js    simulatore della modalità Demo (processo a parte)
+src/web/                  pagine e script serviti al browser
+launcher/                 Launcher.cs e build-exe.ps1 (eseguibile)
+kit/                      skill e agent forniti ai progetti
+build/                    build-dist.js (pacchetto offuscato), zip.py
+test/                     unit, flow, smoke, fixtures (finti Jira, MCP e claude)
+tools/license.js          strumento di chi emette le licenze (la chiave privata non sta nel repository)
+```
+
+Regole: le rotte non contengono logica di dominio (stanno in `services/`); chi lancia `claude` usa `infra/claude.js`; percorsi e dati utente passano solo da `infra/paths.js`; un test (`test/unit/caps-test.js`) blocca ogni cambiamento involontario dei permessi per rotta e `test/flow/routes-golden.json` registra stato e messaggi delle rotte.
