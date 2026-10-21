@@ -105,6 +105,7 @@ const SUITES = {
     { name: 'servizi: Jira come processo separato', file: 'test/flow/services-test.js', env: { noProject: true }, args: ['on'], needsServices: true },
     { name: 'servizi: se non parte, Jira resta in-process', file: 'test/flow/services-test.js', env: { noProject: true, env: { NACP_SERVICE_ENTRY_JIRA: 'C:/non/esiste/jira.js' } }, args: ['fallback'], needsServices: true },
     { name: 'servizi: Tools con il contesto del gateway', file: 'test/flow/tools-service-test.js', env: { env: { NACP_SERVICES: 'jira,tools' } }, needsServices: true },
+    { name: 'servizi: Pipelines (editor) con il contesto del gateway', file: 'test/flow/pipelines-service-test.js', env: { stub: 'stub_panel_claude.js', env: { NACP_SERVICES: 'jira,tools,pipelines' } }, needsServices: true, withRoot: true },
     { name: 'sgancio alla chiusura', file: 'test/flow/detach-test.js', env: {}, withData: true },
     { name: 'rotte del server (stato e messaggi identici al registro)', file: 'test/flow/routes-probe.js', env: { stub: 'stub_live_claude.js' }, withRoot: true },
   ],

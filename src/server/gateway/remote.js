@@ -1,6 +1,6 @@
 // Aree che girano come servizi separati (processi figli su pipe con nome). Il gateway controlla accesso e permessi come sempre,
 // poi inoltra le richieste di quelle aree al loro servizio. Se un servizio non parte, l'area resta in-process: l'app non si ferma.
-//   NACP_SERVICES=jira,...   aree da avviare come servizi (default: jira, tools); vuoto oppure NACP_INPROC=1 = tutto in un processo.
+//   NACP_SERVICES=jira,...   aree da avviare come servizi (default: jira, tools, pipelines); vuoto oppure NACP_INPROC=1 = tutto in un processo.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -13,12 +13,13 @@ const { state } = require('../state');
 const TABLE = {
   jira: ['/api/jira/'],
   tools: ['/api/tools'],
+  pipelines: ['/api/pipelines'],
 };
 
 function enabledNames() {
   if (process.env.NACP_INPROC === '1') return [];
   const raw = process.env.NACP_SERVICES;
-  const list = raw === undefined ? ['jira', 'tools'] : raw.split(',').map((s) => s.trim()).filter(Boolean);
+  const list = raw === undefined ? ['jira', 'tools', 'pipelines'] : raw.split(',').map((s) => s.trim()).filter(Boolean);
   return list.filter((n) => TABLE[n]);
 }
 
