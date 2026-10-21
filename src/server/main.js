@@ -27,6 +27,7 @@ const jira = require('./services/jira');
 const demo = require('./services/demo');
 const crypto = require('crypto');
 const license = require('./services/license');
+const { capFor, requireCap, denyMessage } = require('./http/caps');
 
 const PORT = Number(process.env.UI_PORT || 4173);
 const HOST = '127.0.0.1'; // solo locale: la UI pilota un agente con accesso al repo
@@ -46,47 +47,7 @@ function writeSession() { // lo legge l'eseguibile per aprire il browser col tok
   try { fs.mkdirSync(path.dirname(SESSION_FILE), { recursive: true }); fs.writeFileSync(SESSION_FILE, JSON.stringify({ port: PORT, token: TOKEN, pid: process.pid }), { mode: 0o600 }); } catch (e) { console.error('Impossibile scrivere il file di sessione:', e.message); }
 }
 function removeSession() { try { fs.rmSync(SESSION_FILE, { force: true }); } catch { /* già rimosso */ } }
-/* ---------- profili e permessi ---------- */
-// Ogni rotta richiede un permesso del profilo (licenza). La prima regola che corrisponde vince; ciò che non è elencato è
-// leggibile da tutti (GET) o riservato all'Administrator (POST e altro): così una funzione nuova nasce chiusa.
-const CAP_RULES = [
-  ['*', /^\/api\/(license|license\/import|steps|events|shutdown)$/, null],
-  ['*', /^\/api\/claude\//, null],
-  ['GET', /^\/api\/demo$/, null],
-  ['POST', /^\/api\/demo$/, 'demo'],
-  ['POST', /^\/api\/(start|send|allow|stop|btw)$/, 'run'],
-  ['POST', /^\/api\/(pipeline\/preview|tests\/existing|jira\/search|jira\/issue)$/, 'view'],
-  ['GET', /^\/api\/jira\/(state|verify)$/, 'view'],
-  ['POST', /^\/api\/ide\/open$/, 'ide.open'],
-  ['POST', /^\/api\/git\/push$/, 'git.push'],
-  ['POST', /^\/api\/git\//, 'git.write'],
-  ['POST', /^\/api\/config\//, 'config.edit'],
-  ['POST', /^\/api\/pipelines\//, 'config.edit'], // l'editor modifica .claude/ del progetto: come la configurazione
-  ['POST', /^\/api\/mcp\/(env|mode|panel\/(draft|auto|save|delete))$/, 'config.edit'], // credenziali e schede dei server MCP: come la configurazione
-  ['POST', /^\/api\/mcp\/(tools|call|stop|plan|ask|ask-cancel)$/, 'run'], // avviano il server MCP del progetto e ne chiamano i tool
-  ['POST', /^\/api\/tools\/add$/, 'config.edit'], // modifica il progetto (.mcp.json, .claude): come la configurazione, solo Administrator
-  ['*', /^\/api\/jira\//, 'jira.connect'],
-  ['GET', /^\/api\/(project|project\/inspect|project\/pipeline|repos\/sources|git\/status|config|diagnostics)$/, 'view'],
-  ['*', /^\/api\/(project|repos|m2)\//, 'project.select'], // la creazione di un NUOVO progetto è controllata nel gestore (project.create)
-];
-function capFor(method, url) {
-  const u = url.split('?')[0];
-  if (!u.startsWith('/api/')) return null; // pagina e file statici
-  for (const [m, re, cap] of CAP_RULES) if ((m === '*' || m === method) && re.test(u)) return cap;
-  return method === 'GET' ? 'view' : 'admin';
-}
-// Verifica un permesso nel gestore; fuori dalla Demo il permesso deve venire dal profilo.
-function requireCap(cap, what) {
-  const st = license.current();
-  if (!license.allows(st, cap, false)) throw Object.assign(new Error('Il tuo profilo (' + st.roleLabel + ') non consente ' + what + '.'), { denied: true });
-}
 const isProtectedBranch = (s) => !!s.branch && (['main', 'master'].includes(s.branch) || s.branch === s.baseBranch);
-
-function denyMessage(st, cap) {
-  if (!st.licensed && st.configured) return 'Nessuna licenza valida: sono disponibili solo le funzioni Demo. ' + (st.message || '') + ' Importa la licenza dalla scheda Licenza.';
-  const what = { run: 'di lanciare la pipeline', 'git.write': 'di modificare il repository (commit, branch, merge)', 'git.push': 'di pubblicare le modifiche', 'project.select': 'di cambiare il progetto', 'jira.connect': 'di collegare Jira', 'config.edit': 'di modificare la configurazione', 'ide.open': 'di aprire i file in IntelliJ', demo: 'la modalità Demo' }[cap];
-  return 'Il tuo profilo (' + st.roleLabel + ') non consente ' + (what || 'questa operazione') + '.';
-}
 
 const unauthorizedPage = `<!doctype html><html lang="it"><meta charset="utf-8"><title>Accesso richiesto</title>
 <style>body{font:15px/1.6 "Segoe UI",system-ui,sans-serif;background:#f6f7f9;color:#16181d;display:grid;place-items:center;min-height:100vh;margin:0}main{background:#fff;border:1px solid #e4e7ec;border-radius:14px;padding:32px 36px;max-width:460px;box-shadow:0 4px 16px rgba(16,24,40,.06)}h1{font-size:19px;margin:0 0 8px}p{margin:8px 0;color:#4b5563}</style>
