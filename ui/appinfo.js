@@ -7,7 +7,7 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 
-const UI = __dirname;
+const UI = require('./infra/paths').UI_DIR;
 const EXT = /\.(js|json|html|css|cs|ps1|md|webp|png|svg)$/i;
 let cached = null;
 

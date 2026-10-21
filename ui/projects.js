@@ -5,9 +5,9 @@ const os = require('os');
 const path = require('path');
 const { exec } = require('child_process');
 
-const KIT = path.resolve(__dirname, '..'); // radice dello strumento (developerTest-UI), non un progetto
+const KIT = require('./infra/paths').KIT_DIR; // radice dello strumento (developerTest-UI), non un progetto
 const KIT_CLAUDE = path.join(KIT, 'kit', '.claude'); // agent e skill da copiare nei progetti: fonte unica
-const TPL = path.join(__dirname, 'templates');
+const TPL = require('./infra/paths').uiFile('templates');
 const config = require('./config');
 const PRESET = config.PRESET;
 // Sorgente locale del common Aletheia (sola lettura), se presente nella posizione abituale.
@@ -586,7 +586,7 @@ function customSteps(skill, marker, root) {
     return marker.steps.map((x) => ({ id: x.id, label: x.label, desc: x.desc || '', agents: x.agents || [], skills: x.skills || [] }));
   }
   try {
-    const all = JSON.parse(fs.readFileSync(path.join(__dirname, 'skill-steps.json'), 'utf8'));
+    const all = JSON.parse(fs.readFileSync(require('./infra/paths').uiFile('skill-steps.json'), 'utf8'));
     const list = skill && Object.prototype.hasOwnProperty.call(all, skill) ? all[skill] : null;
     if (!Array.isArray(list) || !list.every((x) => x && typeof x.id === 'string' && typeof x.label === 'string')) return null;
     return list.map((x) => ({ id: x.id, label: x.label, desc: x.desc || '', agents: x.agents || [], skills: x.skills || [] }));

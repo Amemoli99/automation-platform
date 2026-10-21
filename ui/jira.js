@@ -16,7 +16,7 @@ const FIELDS = ['summary', 'status', 'issuetype', 'priority', 'assignee', 'updat
 const MAX_QUERIES = 50;
 
 /* ---------- archivio locale ---------- */
-const dataDir = () => process.env.UI_DATA_DIR || path.join(process.env.APPDATA || os.homedir(), 'developerTest-UI');
+const { dataDir } = require('./infra/paths');
 const storeFile = () => path.join(dataDir(), 'jira.json');
 
 function readStore() {

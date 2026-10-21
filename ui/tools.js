@@ -7,7 +7,7 @@ const path = require('path');
 const { exec } = require('child_process');
 const jdks = require('./jdks');
 
-const KIT_CLAUDE = path.resolve(__dirname, '..', 'kit', '.claude'); // skill e agent del kit del Cockpit: servono a dire "nome presente nel kit"
+const KIT_CLAUDE = require('./infra/paths').KIT_CLAUDE; // skill e agent del kit del Cockpit: servono a dire "nome presente nel kit"
 const MAX_ITEMS = 300;
 
 const clip = (s, n = 300) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim().slice(0, n);
@@ -235,7 +235,7 @@ function hooksAndScripts(root) {
 }
 
 /* ---------- catalogo: aggiungere al progetto (nessuna installazione) ---------- */
-const CATALOG_FILE = path.join(__dirname, 'catalog.json');
+const CATALOG_FILE = require('./infra/paths').uiFile('catalog.json');
 const ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 const ENV_PLACEHOLDER = /^\$\{[A-Z][A-Z0-9_]{0,63}\}$/;
 

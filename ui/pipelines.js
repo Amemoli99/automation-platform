@@ -565,7 +565,7 @@ function readStepsMap(root) {
   try { const j = JSON.parse(fs.readFileSync(stepsFile(root), 'utf8')); return j && typeof j === 'object' && !Array.isArray(j) ? j : {}; } catch { return {}; }
 }
 function globalSteps(skill) {
-  try { const all = JSON.parse(fs.readFileSync(path.join(__dirname, 'skill-steps.json'), 'utf8')); const l = Object.prototype.hasOwnProperty.call(all, skill) ? all[skill] : null; return okSteps(l) ? l : null; } catch { return null; }
+  try { const all = JSON.parse(fs.readFileSync(require('./infra/paths').uiFile('skill-steps.json'), 'utf8')); const l = Object.prototype.hasOwnProperty.call(all, skill) ? all[skill] : null; return okSteps(l) ? l : null; } catch { return null; }
 }
 function getSteps(root, skill) {
   checkName(skill, ITEM_RE);

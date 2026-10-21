@@ -94,7 +94,7 @@ function verifyText(text, { pubPem, now = Date.now(), machine = machineCode() } 
 }
 
 /* ---------- stato corrente ---------- */
-const dataDir = () => process.env.UI_DATA_DIR || path.join(process.env.APPDATA || os.homedir(), 'developerTest-UI');
+const { dataDir } = require('./infra/paths');
 const licenseFile = () => path.join(dataDir(), 'license.json');
 const seenFile = () => path.join(dataDir(), 'license-seen.json');
 

@@ -11,7 +11,7 @@ const { spawn } = require('child_process');
 const ENTROPY = 'developerTest-UI/mcp-env';
 const VAR_RE = /^[A-Za-z_][A-Za-z0-9_]{1,63}$/;
 const SERVER_RE = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/;
-const dataDir = () => process.env.UI_DATA_DIR || path.join(process.env.APPDATA || os.homedir(), 'developerTest-UI');
+const { dataDir } = require('./infra/paths');
 const storeFile = () => path.join(dataDir(), 'mcp-env.json');
 const key = (root) => path.resolve(root).toLowerCase();
 

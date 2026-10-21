@@ -11,7 +11,7 @@ const { spawn } = require('child_process');
 const mcpclient = require('./mcpclient');
 
 const SERVER_RE = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/;
-const dataDir = () => process.env.UI_DATA_DIR || path.join(process.env.APPDATA || os.homedir(), 'developerTest-UI');
+const { dataDir } = require('./infra/paths');
 const flagsFile = () => path.join(dataDir(), 'mcp-readonly.json');
 
 /* ---------- livello di autonomia per server (scelto dall'utente: il Cockpit non può verificare cosa fa davvero un server) ----------

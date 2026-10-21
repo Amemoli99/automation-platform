@@ -6,7 +6,7 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const SIM = path.join(__dirname, 'demo', 'sim.js');
+const SIM = require('./infra/paths').uiFile('demo', 'sim.js');
 const PROJECT_NAME = 'Demo Portal';
 const ORIGIN = 'https://demo.atlassian.net';
 const BLOCKED = new Set([

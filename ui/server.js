@@ -3,6 +3,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const paths = require('./infra/paths');
 const { spawn } = require('child_process');
 const config = require('./config');
 const projects = require('./projects');
@@ -38,7 +39,7 @@ const COOKIE_NAME = 'ui_session_' + PORT; // per porta: due istanze su porte div
 const ORIGINS = [`http://${HOST}:${PORT}`, `http://localhost:${PORT}`];
 const safeEq = (a, b) => { const x = Buffer.from(String(a)), y = Buffer.from(String(b)); return x.length === y.length && crypto.timingSafeEqual(x, y); };
 const cookieOf = (req) => { const m = new RegExp('(?:^|;\\s*)' + COOKIE_NAME + '=([A-Za-z0-9_-]+)').exec(req.headers.cookie || ''); return m ? m[1] : ''; };
-const SESSION_FILE = path.join(process.env.UI_DATA_DIR || path.join(process.env.APPDATA || os.homedir(), 'developerTest-UI'), 'session-' + PORT + '.json');
+const SESSION_FILE = path.join(paths.dataDir(), 'session-' + PORT + '.json');
 function writeSession() { // lo legge l'eseguibile per aprire il browser col token giusto
   try { fs.mkdirSync(path.dirname(SESSION_FILE), { recursive: true }); fs.writeFileSync(SESSION_FILE, JSON.stringify({ port: PORT, token: TOKEN, pid: process.pid }), { mode: 0o600 }); } catch (e) { console.error('Impossibile scrivere il file di sessione:', e.message); }
 }
@@ -89,7 +90,7 @@ const unauthorizedPage = `<!doctype html><html lang="it"><meta charset="utf-8"><
 <style>body{font:15px/1.6 "Segoe UI",system-ui,sans-serif;background:#f6f7f9;color:#16181d;display:grid;place-items:center;min-height:100vh;margin:0}main{background:#fff;border:1px solid #e4e7ec;border-radius:14px;padding:32px 36px;max-width:460px;box-shadow:0 4px 16px rgba(16,24,40,.06)}h1{font-size:19px;margin:0 0 8px}p{margin:8px 0;color:#4b5563}</style>
 <main><h1>Accesso richiesto</h1><p>Questa pagina si apre solo dall'eseguibile <b>NexsoftAutomationCockpit.exe</b>, che porta con sé la chiave di accesso di questa sessione.</p><p>Chiudi questa scheda e riavvia l'eseguibile.</p></main></html>`;
 // Stato per utente, fuori dal kit (così non finisce nello zip): %APPDATA%\developerTest-UI\active-project.json
-const STATE_FILE = process.env.UI_STATE_FILE || path.join(process.env.UI_DATA_DIR || path.join(process.env.APPDATA || os.homedir(), 'developerTest-UI'), 'active-project.json');
+const STATE_FILE = process.env.UI_STATE_FILE || path.join(paths.dataDir(), 'active-project.json');
 // Progetto attivo: la cartella in cui gira `claude` e di cui si leggono permessi e profilo.
 // Di default è il progetto che contiene la UI; si può cambiare dalla scheda Progetto.
 const savedState = (() => { try { return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')); } catch { return {}; } })();
@@ -118,7 +119,7 @@ const needRoot = () => {
   if (!ROOT) throw new Error('Nessun progetto agganciato: scegline uno dalla scheda Progetto.');
   return ROOT;
 };
-const PUBLIC = path.join(__dirname, 'public');
+const PUBLIC = paths.uiFile('public');
 if (ROOT) mcpenv.warm(ROOT).catch(() => { /* idem */ });
 const PERMISSION_MODES = ['default', 'acceptEdits', 'plan'];
 const MAX_FILES = 10;
