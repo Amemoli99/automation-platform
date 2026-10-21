@@ -98,9 +98,11 @@ function cached(root) {
   if (c) for (const vars of Object.values(c)) Object.assign(env, vars);
   return env;
 }
+// Come warm, ma solo se la cache di questo processo è ancora vuota per il progetto (un servizio appena avviato parte senza).
+async function ensure(root) { if (root && !cache.has(key(root))) await warm(root); }
 function forServer(root, server) {
   const c = cache.get(key(root));
   return c && c[server] ? { ...c[server] } : {};
 }
 
-module.exports = { status, set, warm, cached, forServer, VAR_RE, SERVER_RE };
+module.exports = { status, set, warm, ensure, cached, forServer, VAR_RE, SERVER_RE };

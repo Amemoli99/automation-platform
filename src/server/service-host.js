@@ -19,11 +19,19 @@ function readBody(req) {
 
 // Avvia il servizio e ritorna il server. `routes`: modulo o elenco di moduli di rotte.
 // `controls`: messaggi di controllo del gateway ({ operazione: (corpo) => risposta }), per ciò che non è una rotta (es. attivare la Demo).
-async function runService({ name, routes, pipe, token, controls = {} }) {
+// `onShutdown`: da chiamare prima di uscire (es. fermare i processi figli del servizio).
+async function runService({ name, routes, pipe, token, controls = {}, onShutdown = null }) {
   const modules = [].concat(routes);
   const started = Date.now();
   let server = null;
-  const shutdown = (code = 0) => { try { server.close(); } catch { /* già chiuso */ } setTimeout(() => process.exit(code), 100); };
+  let closing = false;
+  const shutdown = (code = 0) => {
+    if (closing) return;
+    closing = true;
+    try { if (onShutdown) onShutdown(); } catch { /* si esce comunque */ }
+    try { server.close(); } catch { /* già chiuso */ }
+    setTimeout(() => process.exit(code), 150);
+  };
   const handler = async (req, res) => {
     const json = (code, obj) => res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Nacp-Service': name }).end(JSON.stringify(obj));
     res.setHeader('X-Nacp-Service', name); // il browser (e i test) possono vedere quale servizio ha risposto

@@ -112,6 +112,7 @@ const SUITES = {
     { name: 'servizi: Tools con il contesto del gateway', file: 'test/flow/tools-service-test.js', env: { env: { NACP_SERVICES: 'jira,tools' } }, needsServices: true },
     { name: 'servizi: Pipelines (editor) con il contesto del gateway', file: 'test/flow/pipelines-service-test.js', env: { stub: 'stub_panel_claude.js', env: { NACP_SERVICES: 'jira,tools,pipelines' } }, needsServices: true, withRoot: true },
     { name: 'servizi: Git con contesto, permessi e sessione in corso', file: 'test/flow/git-service-test.js', env: { stub: 'stub_allow_claude.js', role: 'tester', env: { NACP_SERVICES: 'jira,tools,pipelines,git', GIT_AUTHOR_NAME: 'Prova', GIT_AUTHOR_EMAIL: 'prova@esempio.it', GIT_COMMITTER_NAME: 'Prova', GIT_COMMITTER_EMAIL: 'prova@esempio.it' } }, needsServices: true, withRoot: true },
+    { name: 'servizi: MCP (credenziali, tool, schede, domande a Claude)', file: 'test/flow/mcp-service-test.js', env: { stub: 'stub_panel_claude.js', mcp: true, env: { NACP_SERVICES: 'jira,tools,pipelines,git,mcp' } }, needsServices: true },
     { name: 'sgancio alla chiusura', file: 'test/flow/detach-test.js', env: {}, withData: true },
     { name: 'rotte del server (stato e messaggi identici al registro)', file: 'test/flow/routes-probe.js', env: { stub: 'stub_live_claude.js' }, withRoot: true },
   ],
