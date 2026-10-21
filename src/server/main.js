@@ -90,7 +90,8 @@ const server = http.createServer(async (req, res) => {
   if (auth.guard(req, res, json)) return;
 
   // contesto della richiesta: ciò che le aree (anche quelle in un altro processo) devono sapere dello stato, senza leggerlo
-  const context = { root: state.root, prefs: state.root ? prefsFor(state.root) : {}, demo: !!state.demo };
+  const lic = license.current();
+  const context = { root: state.root, prefs: state.root ? prefsFor(state.root) : {}, demo: !!state.demo, running: state.running, caps: lic.caps, role: lic.role, roleLabel: lic.roleLabel };
   const ctx = { req, res, json, body: null, shutdown, remote, context };
   try {
     const need = capFor(req.method, req.url);

@@ -1,5 +1,4 @@
 // Profili e permessi: ogni rotta richiede un permesso del profilo (licenza).
-const license = require('../areas/license').license;
 
 // La prima regola che corrisponde vince; ciò che non è elencato è leggibile da tutti (GET) o riservato all'Administrator (POST e altro):
 // così una funzione nuova nasce chiusa. Un test (test/unit/caps-test.js) blocca ogni cambiamento involontario.
@@ -29,16 +28,10 @@ function capFor(method, url) {
   for (const [m, re, cap] of CAP_RULES) if ((m === '*' || m === method) && re.test(u)) return cap;
   return method === 'GET' ? 'view' : 'admin';
 }
-// Verifica un permesso nel gestore; fuori dalla Demo il permesso deve venire dal profilo.
-function requireCap(cap, what) {
-  const st = license.current();
-  if (!license.allows(st, cap, false)) throw Object.assign(new Error('Il tuo profilo (' + st.roleLabel + ') non consente ' + what + '.'), { denied: true });
-}
-
 function denyMessage(st, cap) {
   if (!st.licensed && st.configured) return 'Nessuna licenza valida: sono disponibili solo le funzioni Demo. ' + (st.message || '') + ' Importa la licenza dalla scheda Licenza.';
   const what = { run: 'di lanciare la pipeline', 'git.write': 'di modificare il repository (commit, branch, merge)', 'git.push': 'di pubblicare le modifiche', 'project.select': 'di cambiare il progetto', 'jira.connect': 'di collegare Jira', 'config.edit': 'di modificare la configurazione', 'ide.open': 'di aprire i file in IntelliJ', demo: 'la modalità Demo' }[cap];
   return 'Il tuo profilo (' + st.roleLabel + ') non consente ' + (what || 'questa operazione') + '.';
 }
 
-module.exports = { CAP_RULES, capFor, requireCap, denyMessage };
+module.exports = { CAP_RULES, capFor, denyMessage };

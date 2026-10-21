@@ -91,6 +91,11 @@ async function startEnv(name, opt = {}) {
     if (s !== 200) { stop(); throw new Error('Jira di prova non configurato: ' + JSON.stringify(j).slice(0, 200)); }
     [s, j] = await api(base, 'POST', '/api/jira/unlink', {});
   }
+  if (opt.role && opt.role !== 'admin') { // il progetto si crea da Administrator; poi si passa al profilo richiesto importando la licenza dall'API, come farebbe l'utente
+    const text = lic.issue({ privatePem: kp.privatePem, org: 'Prova', user: 'Test ' + opt.role, email: 'test@esempio.it', role: opt.role, machine: lic.machineCode(), days: 7 });
+    const [s2, j2] = await api(base, 'POST', '/api/license/import', { text });
+    if (s2 !== 200 || j2.role !== opt.role) { stop(); throw new Error('licenza ' + opt.role + ' non importata: ' + JSON.stringify(j2).slice(0, 200)); }
+  }
   return { base, dir: parent, data, stubLog: env.STUB_LOG, root: path.join(proj, 'p'), stop, log: () => log };
 }
 
@@ -106,6 +111,7 @@ const SUITES = {
     { name: 'servizi: se non parte, Jira resta in-process', file: 'test/flow/services-test.js', env: { noProject: true, env: { NACP_SERVICE_ENTRY_JIRA: 'C:/non/esiste/jira.js' } }, args: ['fallback'], needsServices: true },
     { name: 'servizi: Tools con il contesto del gateway', file: 'test/flow/tools-service-test.js', env: { env: { NACP_SERVICES: 'jira,tools' } }, needsServices: true },
     { name: 'servizi: Pipelines (editor) con il contesto del gateway', file: 'test/flow/pipelines-service-test.js', env: { stub: 'stub_panel_claude.js', env: { NACP_SERVICES: 'jira,tools,pipelines' } }, needsServices: true, withRoot: true },
+    { name: 'servizi: Git con contesto, permessi e sessione in corso', file: 'test/flow/git-service-test.js', env: { stub: 'stub_allow_claude.js', role: 'tester', env: { NACP_SERVICES: 'jira,tools,pipelines,git', GIT_AUTHOR_NAME: 'Prova', GIT_AUTHOR_EMAIL: 'prova@esempio.it', GIT_COMMITTER_NAME: 'Prova', GIT_COMMITTER_EMAIL: 'prova@esempio.it' } }, needsServices: true, withRoot: true },
     { name: 'sgancio alla chiusura', file: 'test/flow/detach-test.js', env: {}, withData: true },
     { name: 'rotte del server (stato e messaggi identici al registro)', file: 'test/flow/routes-probe.js', env: { stub: 'stub_live_claude.js' }, withRoot: true },
   ],

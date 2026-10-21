@@ -10,7 +10,7 @@ const path = require('path');
 
 const HEADER = 'x-nacp-token';
 const CONTEXT_HEADER = 'x-nacp-context'; // contesto della richiesta (progetto, preferenze, Demo): lo scrive solo il gateway
-const EMPTY_CONTEXT = { root: null, prefs: {}, demo: false };
+const EMPTY_CONTEXT = { root: null, prefs: {}, demo: false, running: false, caps: [], role: '', roleLabel: '' };
 const encodeContext = (c) => Buffer.from(JSON.stringify(c || EMPTY_CONTEXT), 'utf8').toString('base64');
 function decodeContext(v) { try { const c = JSON.parse(Buffer.from(String(v || ''), 'base64').toString('utf8')); return { ...EMPTY_CONTEXT, ...c }; } catch { return { ...EMPTY_CONTEXT }; } }
 const newId = (bytes = 8) => crypto.randomBytes(bytes).toString('hex');

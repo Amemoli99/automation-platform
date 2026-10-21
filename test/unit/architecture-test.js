@@ -41,7 +41,7 @@ for (const f of files) {
     if (meLayer === 'area' && tLayer === 'gateway' && !target.startsWith('http/')) fail(me + ' importa ' + target + ': le aree non dipendono dal gateway');
     if (tArea && tArea !== meArea) {
       const pub = target === 'areas/' + tArea + '/index';
-      const routes = meLayer === 'gateway' && target === 'areas/' + tArea + '/routes';
+      const routes = meLayer === 'gateway' && new RegExp('^areas/' + tArea + '/([\\w-]+-)?routes$').test(target); // le rotte di un'area (o di un suo pezzo, es. git-routes) sono un secondo punto d'ingresso per il gateway e i servizi
       const sim = false;
       if (!pub && !routes && !sim) fail(me + ' importa ' + target + ': tra aree si importa solo areas/' + tArea + '/index.js');
       if (meLayer === 'core') continue;

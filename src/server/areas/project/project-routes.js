@@ -4,9 +4,8 @@ const fs = require('fs');
 const projects = require('./projects');
 const { activate } = require('./activate');
 const jdks = require('./jdks');
-const { requireCap } = require('../../http/caps');
 const { state, isDir, prefsFor, saveState, needRoot } = require('../../state');
-const { NOT_HANDLED } = require('../../http/route');
+const { NOT_HANDLED, requireCap } = require('../../http/route');
 
 // Chiavi dei ticket che hanno già un test nel progetto (classe <PREFISSO>_<n>.java, es. NX-2 -> NX_2.java). Sola lettura.
 function existingTests(keys) {
@@ -82,12 +81,12 @@ module.exports = {
     if (req.url === '/api/pipeline/preview') return json(200, { command: projects.buildCommand(needRoot(), prefsFor(state.root), String(body.ticket || '').trim() || 'TICKET-1 — titolo di esempio') });
     if (req.url === '/api/project/pick-folder') return json(200, { dir: await projects.pickFolder() });
     if (req.url === '/api/project/plan') {
-      if (body.mode !== 'existing') requireCap('project.create', 'di creare nuovi progetti');
+      if (body.mode !== 'existing') requireCap(ctx, 'project.create', 'di creare nuovi progetti');
       const plan = body.mode === 'existing' ? projects.planExisting({ ...body, prefs: prefsFor(body.dir) }) : projects.planNew(body);
       return json(200, { dir: plan.dir, files: projects.classify(plan) });
     }
     if (req.url === '/api/project/create') {
-      if (body.mode !== 'existing') requireCap('project.create', 'di creare nuovi progetti');
+      if (body.mode !== 'existing') requireCap(ctx, 'project.create', 'di creare nuovi progetti');
       if (body.mode === 'existing') {
         const r = projects.configureExisting({ ...body, prefs: prefsFor(body.dir) });
         if (body.activate !== false) activate(r.dir);

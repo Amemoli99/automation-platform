@@ -7,4 +7,11 @@ const needRoot = (ctx) => {
   return ctx.context.root;
 };
 
-module.exports = { NOT_HANDLED, needRoot };
+// Verifica un permesso del profilo dai dati del contesto (il gateway li ricava dalla licenza: i servizi non la leggono).
+const requireCap = (ctx, cap, what) => {
+  const c = ctx.context || {};
+  const ok = cap === 'admin' ? c.role === 'admin' : (c.caps || []).includes(cap);
+  if (!ok) throw Object.assign(new Error('Il tuo profilo (' + (c.roleLabel || 'sconosciuto') + ') non consente ' + what + '.'), { denied: true });
+};
+
+module.exports = { NOT_HANDLED, needRoot, requireCap };
