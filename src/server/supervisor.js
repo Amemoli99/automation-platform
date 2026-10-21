@@ -30,7 +30,10 @@ function createSupervisor({ services, restart = {}, readyTimeoutMs = 15000, onEv
       child.stderr.on('data', (d) => note(s, d));
       let settled = false;
       const timer = setTimeout(() => { if (!settled) { settled = true; killTree(child); reject(new Error('Il servizio "' + s.name + '" non è partito entro ' + Math.round(readyTimeoutMs / 1000) + ' s.' + (s.tail ? ' Ultimo output: ' + s.tail.trim().slice(-300) : ''))); } }, readyTimeoutMs);
-      child.on('message', (m) => { if (m && m.type === 'ready' && !settled) { settled = true; clearTimeout(timer); setState(s, 'ready'); resolve(); } });
+      child.on('message', (m) => {
+        if (m && m.type === 'ready') { if (!settled) { settled = true; clearTimeout(timer); setState(s, 'ready'); resolve(); } return; }
+        if (m) emit({ type: 'message', service: s.name, message: m }); // altri messaggi del servizio (es. lo stato "sessione in corso")
+      });
       child.on('error', (e) => { clearTimeout(timer); if (!settled) { settled = true; setState(s, 'failed'); reject(e); } });
       child.on('exit', (code, signal) => {
         clearTimeout(timer);

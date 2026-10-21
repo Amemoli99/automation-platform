@@ -33,7 +33,8 @@ module.exports = {
       }
       const lic = await safe(() => license.current());
       const jst = await safe(() => ctx.remote.callOr('jira', { url: '/api/jira/state' }, () => jira.publicState()));
-      const md = report.build({ now: new Date(), app: appinfo.info(), demo: !!state.demo, diag, project, tools: toolsInfo, license: lic, jira: jst && { configured: !!jst.configured, source: jst.source }, session: { status: session.getStatus() } });
+      const sess = await safe(() => ctx.remote.controlOr('session', 'status', {}, () => ({ status: session.getStatus() })));
+      const md = report.build({ now: new Date(), app: appinfo.info(), demo: !!state.demo, diag, project, tools: toolsInfo, license: lic, jira: jst && { configured: !!jst.configured, source: jst.source }, session: { status: (sess && sess.status) || '' } });
       const stamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12);
       res.writeHead(200, { 'Content-Type': 'text/markdown; charset=utf-8', 'Content-Disposition': 'attachment; filename="nacp-diagnostica-' + stamp + '.md"', 'Cache-Control': 'no-store' }).end(md);
       return;

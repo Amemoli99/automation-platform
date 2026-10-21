@@ -22,6 +22,11 @@ const AREAS = [require('./gateway/system'), require('./gateway/repos'), require(
   require('./areas/jira/routes'), require('./areas/mcp/routes'), require('./areas/pipelines/routes'), require('./areas/tools/routes')].flat(); // require statici: il pacchetto li unisce con esbuild
 const MAX_BODY = Math.ceil(session.MAX_TOTAL * 1.4); // base64 + overhead JSON
 
+// In-process la sessione dice direttamente allo stato dell'app se un claude è in corso; come servizio lo comunica il supervisore (gateway/remote.js).
+session.hooks.onRunning = (running) => { state.running = running; };
+// Progetto o modalità Demo cambiati: la sessione riparte da zero (come servizio, con un controllo).
+state.events.on('reset', () => { if (remote.has('session')) remote.control('session', 'reset', {}).catch(() => { /* il servizio si riavvia da solo */ }); else session.reset(); });
+
 const PORT = Number(process.env.UI_PORT || 4173);
 const HOST = '127.0.0.1'; // solo locale: la UI pilota un agente con accesso al repo
 const auth = createAuth({ HOST, PORT, dataDir: paths.dataDir });

@@ -11,7 +11,6 @@ const mcpenv = require('../mcp').env;
 const { redact, describeTool } = require('./redact');
 const jdks = require('../project').jdks;
 const demo = require('../demo').demo;
-const { state, prefsFor, saveState, needRoot } = require('../../state');
 
 const PERMISSION_MODES = ['default', 'acceptEdits', 'plan'];
 const MAX_FILES = 10;
@@ -32,7 +31,14 @@ const STEPS = [
 ];
 
 let proc = null;
-const setProc = (p) => { proc = p; state.running = !!p; };
+// Contesto in cui lavora la sessione (progetto, preferenze, Demo): lo passa il gateway a ogni richiesta (setContext).
+// Con una sessione in corso il progetto non può cambiare, quindi resta coerente per tutta la sua durata.
+let cx = { root: null, prefs: {}, demo: false };
+const setContext = (c) => { cx = { root: (c && c.root) || null, prefs: (c && c.prefs) || {}, demo: !!(c && c.demo) }; };
+// Chi ospita la sessione (gateway o servizio) vuole sapere quando un processo claude è in corso.
+const hooks = { onRunning: () => {} };
+const needRoot = () => { if (!cx.root) throw new Error('Nessun progetto agganciato: scegline uno dalla scheda Progetto.'); return cx.root; };
+const setProc = (p) => { proc = p; hooks.onRunning(!!p); };
 let events = []; // buffer per i client che si riconnettono
 let status = 'idle'; // idle | running | waiting | done | error
 let steps = {};
@@ -44,7 +50,7 @@ let extraAllow = []; // regole concesse dall'utente via UI, valide solo per la s
 let pendingRules = new Map(); // regola -> dettaglio, dai permission_denials dell'ultimo turno
 
 const freshSteps = (defs) => Object.fromEntries((defs || STEPS).map((s) => [s.id, 'pending']));
-const currentStepDefs = () => { try { return projects.resolvePipeline(state.root, prefsFor(state.root)).steps || null; } catch { return null; } };
+const currentStepDefs = () => { try { return projects.resolvePipeline(cx.root, cx.prefs).steps || null; } catch { return null; } };
 // ---- In diretta: testo e parametri delle azioni mentre Claude li scrive (messaggi parziali della CLI) ----
 // Sono istantanee, non finiscono nel buffer di riconnessione (quello tiene solo i messaggi completi). Ogni testo passa da redact():
 // la maschera si applica a tutto il testo accumulato, quindi un segreto spezzato su più pezzi non si vede mai per intero né a metà.
@@ -55,9 +61,9 @@ let secretCache = { stamp: '', values: [] };
 const liveClip = (s, n) => (s.length > n ? '…\n' + s.slice(-n) : s);
 // Valori segreti noti da mascherare alla lettera: credenziali dei server MCP e valori del .env del progetto.
 function secretValues() {
-  const vals = new Set(Object.values(mcpenv.cached(state.root)));
+  const vals = new Set(Object.values(mcpenv.cached(cx.root)));
   try {
-    const f = path.join(state.root, '.env');
+    const f = path.join(cx.root, '.env');
     const stamp = f + fs.statSync(f).mtimeMs;
     if (secretCache.stamp !== stamp) {
       const list = fs.readFileSync(f, 'utf8').split(/\r?\n/).map((l) => (l.match(/^\s*[A-Za-z_][A-Za-z0-9_]*\s*=\s*(.*)$/) || [])[1]).filter(Boolean).map((v) => v.replace(/^["']|["']$/g, '')).filter((v) => v.length >= 6);
@@ -155,8 +161,8 @@ function stepFor(block) {
 
 // Percorso relativo alla radice del progetto (solo se il file è dentro il progetto), altrimenti ''.
 function relInRoot(p) {
-  if (!p || !state.root) return '';
-  const rel = path.relative(state.root, path.resolve(state.root, String(p)));
+  if (!p || !cx.root) return '';
+  const rel = path.relative(cx.root, path.resolve(cx.root, String(p)));
   return rel && !rel.startsWith('..') && !path.isAbsolute(rel) ? rel.split(path.sep).join('/') : '';
 }
 
@@ -232,7 +238,7 @@ function handleLine(line) {
 function saveAttachments(list) {
   if (!Array.isArray(list) || !list.length) return null;
   if (list.length > MAX_FILES) throw new Error(`Massimo ${MAX_FILES} allegati`);
-  const dir = path.join(state.root, '.tmp', `ui-${Date.now()}`);
+  const dir = path.join(cx.root, '.tmp', `ui-${Date.now()}`);
   fs.mkdirSync(dir, { recursive: true });
   const names = [];
   let total = 0;
@@ -246,7 +252,7 @@ function saveAttachments(list) {
     fs.writeFileSync(path.join(dir, name), buf);
     names.push(name);
   }
-  return { dir: path.relative(state.root, dir).split(path.sep).join('/'), names };
+  return { dir: path.relative(cx.root, dir).split(path.sep).join('/'), names };
 }
 
 let permMode = 'acceptEdits';
@@ -265,14 +271,14 @@ function launch(resume) {
   if (resume && sessionId) args.push('--resume', sessionId);
   if (extraAllow.length) {
     const rel = '.tmp/ui-allow.json';
-    fs.mkdirSync(path.join(state.root, '.tmp'), { recursive: true });
-    fs.writeFileSync(path.join(state.root, rel), JSON.stringify({ permissions: { allow: extraAllow } }));
+    fs.mkdirSync(path.join(cx.root, '.tmp'), { recursive: true });
+    fs.writeFileSync(path.join(cx.root, rel), JSON.stringify({ permissions: { allow: extraAllow } }));
     args.push('--settings', rel);
   }
   // shell:true serve su Windows per risolvere claude.cmd; gli args sono costanti, il ticket va via stdin
-  const p = state.demo
-    ? spawn(process.execPath, [demo.SIM], { cwd: state.root, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true })
-    : spawnClaude(args, { cwd: state.root, env: { ...jdks.envFor(prefsFor(state.root).jdk), ...mcpenv.cached(state.root) }, stdio: ['pipe', 'pipe', 'pipe'] });
+  const p = cx.demo
+    ? spawn(process.execPath, [demo.SIM], { cwd: cx.root, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true })
+    : spawnClaude(args, { cwd: cx.root, env: { ...jdks.envFor(cx.prefs.jdk), ...mcpenv.cached(cx.root) }, stdio: ['pipe', 'pipe', 'pipe'] });
   setProc(p);
   let buf = '';
   p.stdout.on('data', (d) => {
@@ -318,8 +324,8 @@ function allow(rules) {
 function start(ticket, permissionMode, attachments) {
   if (proc) throw new Error('Sessione già attiva');
   needRoot();
-  if (!projects.inspect(state.root, prefsFor(state.root)).ready) throw new Error('Il progetto non è pronto: apri la scheda Progetto (scegli la skill da lanciare oppure premi "Prepara il progetto").');
-  const command = projects.buildCommand(state.root, prefsFor(state.root), ticket); // /<skill> <argomenti>
+  if (!projects.inspect(cx.root, cx.prefs).ready) throw new Error('Il progetto non è pronto: apri la scheda Progetto (scegli la skill da lanciare oppure premi "Prepara il progetto").');
+  const command = projects.buildCommand(cx.root, cx.prefs, ticket); // /<skill> <argomenti>
   if (ticket.length > MAX_TICKET) throw new Error('Ticket troppo lungo');
   if (!PERMISSION_MODES.includes(permissionMode)) throw new Error('Permission mode non valido');
   const saved = saveAttachments(attachments);
@@ -370,12 +376,12 @@ function askBtw(question) {
   if (!q) throw new Error('Write a question first.');
   if (q.length > 2000) throw new Error('Question too long (max 2000 characters).');
   if (btwProc) throw new Error('A question is already being answered: wait for it.');
-  if (state.demo) return Promise.resolve({ answer: demoAnswer(q), simulated: true });
+  if (cx.demo) return Promise.resolve({ answer: demoAnswer(q), simulated: true });
   needRoot();
   if (!sessionId || !/^[\w-]{3,64}$/.test(sessionId)) throw new Error('There is no session to ask about yet: start a run first.');
   return new Promise((resolve, reject) => {
     const args = ['-p', '--resume', sessionId, '--fork-session', '--output-format', 'json', '--permission-mode', 'default', '--max-turns', '4', '--max-budget-usd', '0.5'];
-    const p = spawnClaude(args, { cwd: state.root, env: { ...jdks.envFor(prefsFor(state.root).jdk), ...mcpenv.cached(state.root) }, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
+    const p = spawnClaude(args, { cwd: cx.root, env: { ...jdks.envFor(cx.prefs.jdk), ...mcpenv.cached(cx.root) }, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
     btwProc = p;
     let out = '', err = '', over = false;
     const timer = setTimeout(() => { over = true; killTree(p); }, 120000);
@@ -414,7 +420,7 @@ function attachClient(req, res) {
   req.on('close', () => clients.delete(res));
 }
 
-// Progetto o modalità Demo cambiati (areas/project/activate.js, areas/demo/mode.js): la sessione riparte da zero.
-state.events.on('reset', () => { resetState(); setStatus('idle'); });
+// Progetto o modalità Demo cambiati: la sessione riparte da zero (il gateway lo chiede: direttamente o con il controllo 'reset' del servizio).
+function reset() { resetState(); setStatus('idle'); }
 
-module.exports = { STEPS, MAX_TOTAL, start, send, allow, stop, askBtw, attachClient, getStatus };
+module.exports = { STEPS, MAX_TOTAL, start, send, allow, stop, askBtw, attachClient, getStatus, setContext, reset, hooks };

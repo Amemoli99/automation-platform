@@ -1,6 +1,6 @@
 // Aree che girano come servizi separati (processi figli su pipe con nome). Il gateway controlla accesso e permessi come sempre,
 // poi inoltra le richieste di quelle aree al loro servizio. Se un servizio non parte, l'area resta in-process: l'app non si ferma.
-//   NACP_SERVICES=jira,...   aree da avviare come servizi (default: jira, tools, pipelines, git, mcp, repos, project); vuoto oppure NACP_INPROC=1 = tutto in un processo.
+//   NACP_SERVICES=jira,...   aree da avviare come servizi (default: jira, tools, pipelines, git, mcp, repos, project, session); vuoto oppure NACP_INPROC=1 = tutto in un processo.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -18,6 +18,7 @@ const TABLE = {
   git: ['* /api/git/*'],
   mcp: ['* /api/mcp/*'],
   repos: ['* /api/repos/sources*', '* /api/repos/list*'], // il clone passa dal gateway (gateway/repos.js): cambia il progetto agganciato
+  session: ['GET /api/events', 'GET /api/steps', 'POST /api/start', 'POST /api/send', 'POST /api/btw', 'POST /api/allow', 'POST /api/stop'],
   project: [
     'GET /api/project/inspect', 'GET /api/project/pipeline', 'GET /api/config', 'GET /api/claude/auth', 'GET /api/claude/login',
     'POST /api/project/prepare', 'POST /api/tests/existing', 'POST /api/pipeline/preview', 'POST /api/project/pick-folder', 'POST /api/project/plan',
@@ -33,7 +34,7 @@ const matches = (patterns, method, url) => patterns.some((pat) => {
 function enabledNames() {
   if (process.env.NACP_INPROC === '1') return [];
   const raw = process.env.NACP_SERVICES;
-  const list = raw === undefined ? ['jira', 'tools', 'pipelines', 'git', 'mcp', 'repos', 'project'] : raw.split(',').map((s) => s.trim()).filter(Boolean);
+  const list = raw === undefined ? ['jira', 'tools', 'pipelines', 'git', 'mcp', 'repos', 'project', 'session'] : raw.split(',').map((s) => s.trim()).filter(Boolean);
   return list.filter((n) => TABLE[n]);
 }
 
@@ -46,6 +47,9 @@ function create({ log = () => {} } = {}) {
   // Dopo ogni (ri)avvio di un servizio gli si ripete lo stato che non vive nel suo processo (la modalità Demo).
   const onEvent = (e) => {
     log(e);
+    // "sessione in corso" vive nel servizio Session: il gateway ne tiene una copia perché git, progetto e cambio progetto la consultano
+    if (e.type === 'message' && e.service === 'session' && e.message.type === 'running') state.running = !!e.message.running;
+    if (e.type === 'state' && e.service === 'session' && e.state !== 'ready') state.running = false; // il servizio è caduto o si ferma: nessun claude in corso
     if (e.type === 'state' && e.state === 'ready' && live.has(e.service) && state.demo) control(e.service, 'demo', { on: true }).catch(() => {});
   };
 
@@ -85,6 +89,7 @@ function create({ log = () => {} } = {}) {
     if (r.status !== 200) throw failure(r, 'Il servizio "' + name + '" ha rifiutato "' + op + '"');
     return JSON.parse(r.body.toString('utf8'));
   }
+  const controlOr = (name, op, body, local) => (has(name) ? control(name, op, body) : local());
   const broadcast = (op, body) => Promise.all([...live].map((n) => control(n, op, body)));
   // Come chiamare un'area: via servizio se gira separata, altrimenti con la funzione locale.
   async function callOr(name, opts, local, context) {
@@ -95,7 +100,7 @@ function create({ log = () => {} } = {}) {
   }
   const status = () => (sup ? sup.status() : {});
   const stop = async () => { if (sup) await sup.stop(); live.clear(); };
-  return { start, has, serviceFor, forward, call, control, broadcast, callOr, status, stop, names: () => [...live] };
+  return { start, has, serviceFor, forward, call, control, controlOr, broadcast, callOr, status, stop, names: () => [...live] };
 }
 
 module.exports = { create, TABLE };
