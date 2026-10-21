@@ -128,4 +128,4 @@ Gli script della pagina sono script classici che condividono lo stesso ambito gl
 
 Architettura (imposta da `test/unit/architecture-test.js`): tra aree si importa solo `areas/<area>/index.js` e solo lungo le dipendenze dichiarate nel test; nessun ciclo; le aree non importano il gateway; il nucleo (`infra`, `state`) non importa aree. Una nuova funzione = rotta nell'area giusta + logica nell'area. Le aree sono i punti in cui, se servisse, il server si potrebbe dividere in processi separati.
 
-Regole: le rotte non contengono logica di dominio (stanno in `services/`); chi lancia `claude` usa `infra/claude.js`; percorsi e dati utente passano solo da `infra/paths.js`; un test (`test/unit/caps-test.js`) blocca ogni cambiamento involontario dei permessi per rotta e `test/flow/routes-golden.json` registra stato e messaggi delle rotte.
+Regole: chi lancia `claude` usa `infra/claude.js`; percorsi e dati utente passano solo da `infra/paths.js`; un test (`test/unit/caps-test.js`) blocca ogni cambiamento involontario dei permessi per rotta e `test/flow/routes-golden.json` registra stato e messaggi delle rotte.
