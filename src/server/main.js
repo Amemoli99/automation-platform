@@ -11,8 +11,9 @@ const { openInIde } = require('./services/ide');
 const { capFor, denyMessage } = require('./http/caps');
 const { createAuth } = require('./http/auth');
 const { serveStatic } = require('./http/static');
-const { state, saveState } = require('./state');
+const { state, saveState, needRoot } = require('./state');
 const session = require('./session');
+const workspace = require('./workspace');
 const { NOT_HANDLED } = require('./routes/common');
 
 // Aree della API, nell'ordine in cui vengono interrogate. Ognuna espone get(ctx) e post(ctx) e risponde NOT_HANDLED per le rotte che non sono sue.
@@ -31,7 +32,7 @@ if (state.root) mcpenv.warm(state.root).catch(() => { /* idem */ });
 // piattaforma si sgancia: alla riapertura riparte pulita e il progetto resta tra i recenti. Altrimenti resta agganciata.
 // I file di servizio della piattaforma (.tmp/, .playwright-mcp/) non contano come lavoro in sospeso.
 async function detachIfClean() {
-  if (state.demo || !state.root || session.isRunning()) return;
+  if (state.demo || !state.root || state.running) return;
   try {
     const s = await git.status(state.root);
     // Senza git (non installato, init non riuscito, cartella non repository) non esiste lavoro "non pubblicato" che lo sgancio
@@ -101,8 +102,8 @@ const server = http.createServer(async (req, res) => {
       ctx.body = await readBody(req);
       const body = ctx.body;
       if (req.url === '/api/license/import') return json(200, { ...license.importText(String(body.text || '')), inDemo: !!state.demo });
-      if (req.url === '/api/ide/open') return json(200, openInIde(body.path, body.line));
-      if (req.url === '/api/demo') { if (body.on) session.demoEnter(); else session.demoLeave(); return json(200, { on: !!state.demo }); }
+      if (req.url === '/api/ide/open') { if (state.demo) throw new Error('Non disponibile in modalità Demo: il progetto è una simulazione.'); return json(200, openInIde(needRoot(), body.path, body.line)); }
+      if (req.url === '/api/demo') { if (body.on) workspace.demoEnter(); else workspace.demoLeave(); return json(200, { on: !!state.demo }); }
       if (state.demo && demo.BLOCKED.has(req.url)) return json(403, { error: 'Non disponibile in modalità Demo: è una simulazione, non modifica nulla di reale.' });
       for (const area of AREAS) { if ((await area.post(ctx)) !== NOT_HANDLED) return; }
     }

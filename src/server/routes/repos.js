@@ -1,14 +1,26 @@
 // Rotte delle origini Git (GitHub/GitLab): origini salvate e collegate, elenco repository, clone.
 const repos = require('../services/repos');
-const session = require('../session');
+const workspace = require('../workspace');
 const { projectInfo } = require('./project');
 const { state, saveState } = require('../state');
 const { NOT_HANDLED } = require('./common');
 
 // Origini Git: l'app parte SENZA nessuna origine collegata e non ne deduce più dai progetti presenti sul computer.
 // Quelle aggiunte dall'utente restano salvate ("savedList") e si collegano con un clic; "sources" sono solo quelle collegate in questa sessione.
+// Le origini salvate si normalizzano alla prima lettura: le vecchie voci testuali (solo GitHub) vengono migrate, quelle non valide scartate.
+let sourcesChecked = false;
+function loadSources() {
+  if (!sourcesChecked) {
+    state.sources = state.sources.map((o) => {
+      try { return repos.normalizeSource(typeof o === 'string' ? { provider: 'github', owner: o } : o); } catch { return null; }
+    }).filter(Boolean);
+    sourcesChecked = true;
+  }
+  return state.sources;
+}
+
 async function ownerSources() {
-  const saved = state.sources.map(repos.describeSource);
+  const saved = loadSources().map(repos.describeSource);
   return { sources: saved.filter((s) => state.linked.has(s.key)), savedList: saved, saved: state.sources.length > 0, discovered: [] };
 }
 // Origine richiesta dal browser: deve essere una di quelle configurate o dedotte (mai un host arbitrario).
@@ -29,7 +41,7 @@ module.exports = {
     const { req, res, json, body } = ctx;
     if (req.url === '/api/repos/sources') {
       const list = (Array.isArray(body.sources) ? body.sources : []).map((s) => repos.normalizeSource(s));
-      const prev = new Set(state.sources.map((s) => repos.sourceKey(s)));
+      const prev = new Set(loadSources().map((s) => repos.sourceKey(s)));
       state.sources = list.filter((s, i) => list.findIndex((x) => repos.sourceKey(x) === repos.sourceKey(s)) === i).slice(0, 10);
       const now = new Set(state.sources.map((s) => repos.sourceKey(s)));
       for (const k of [...state.linked]) if (!now.has(k)) state.linked.delete(k); // un'origine tolta dalle salvate si scollega
@@ -45,10 +57,10 @@ module.exports = {
       return json(200, { source: repos.describeSource(source), repos: repos.markLocal(list, body.parent) });
     }
     if (req.url === '/api/repos/clone') {
-      if (session.isRunning()) throw new Error('Termina la sessione in corso prima di cambiare progetto');
+      if (state.running) throw new Error('Termina la sessione in corso prima di cambiare progetto');
       const source = await allowedSource(body);
       const r = await repos.cloneRepo({ source, repo: body.repo, parent: body.parent });
-      session.activate(r.dir);
+      workspace.activate(r.dir);
       return json(200, { ...r, project: projectInfo() });
     }
     return NOT_HANDLED;

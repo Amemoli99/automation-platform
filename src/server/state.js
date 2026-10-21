@@ -4,8 +4,8 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { EventEmitter } = require('events');
 const paths = require('./infra/paths');
-const repos = require('./services/repos');
 
 const STATE_FILE = process.env.UI_STATE_FILE || path.join(paths.dataDir(), 'active-project.json');
 const savedState = (() => { try { return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')); } catch { return {}; } })();
@@ -22,10 +22,8 @@ const state = {
   // Progetto attivo: la cartella in cui gira `claude` e di cui si leggono permessi e profilo. null = nessun progetto agganciato: va scelto dalla scheda Progetto.
   root: isDir(savedState.root) ? savedState.root : null,
   recent: (Array.isArray(savedState.recent) ? savedState.recent : []).filter(isDir).slice(0, 8), // progetti agganciati di recente
-  // Origini Git configurate (GitHub/GitLab). Le vecchie voci testuali (solo GitHub) vengono migrate.
-  sources: (Array.isArray(savedState.sources) ? savedState.sources : []).map((o) => {
-    try { return repos.normalizeSource(typeof o === 'string' ? { provider: 'github', owner: o } : o); } catch { return null; }
-  }).filter(Boolean),
+  // Origini Git configurate (GitHub/GitLab), come salvate: le normalizza chi le usa (routes/repos.js).
+  sources: Array.isArray(savedState.sources) ? savedState.sources : [],
   // Scelta della skill (e dei suoi argomenti) per progetto: { "<percorso>": { skill, args } }
   prefs: savedState.prefs && typeof savedState.prefs === 'object' ? savedState.prefs : {},
   // Repository Maven del framework di test: lo indica l'utente al primo progetto e l'app lo ricorda (UI_FRAMEWORK_REPO per forzarlo).
@@ -33,6 +31,8 @@ const state = {
   demo: null, // modalità Demo attiva: { prevRoot, base, restore }
   linked: new Set(), // chiavi delle origini collegate (solo in memoria: a ogni avvio si riparte vuoti)
   workspace: WORKSPACE,
+  running: false, // la sessione di claude è in corso (la imposta session.js)
+  events: new EventEmitter(), // 'reset': progetto o modalità Demo cambiati, la sessione riparte da zero (session.js ascolta)
 };
 
 const prefsFor = (dir) => (dir && state.prefs[String(dir).toLowerCase()]) || {};

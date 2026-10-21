@@ -33,6 +33,7 @@ const STEPS = [
 ];
 
 let proc = null;
+const setProc = (p) => { proc = p; state.running = !!p; };
 let events = []; // buffer per i client che si riconnettono
 let status = 'idle'; // idle | running | waiting | done | error
 let steps = {};
@@ -273,7 +274,7 @@ function launch(resume) {
   const p = state.demo
     ? spawn(process.execPath, [demo.SIM], { cwd: state.root, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true })
     : spawnClaude(args, { cwd: state.root, env: { ...jdks.envFor(prefsFor(state.root).jdk), ...mcpenv.cached(state.root) }, stdio: ['pipe', 'pipe', 'pipe'] });
-  proc = p;
+  setProc(p);
   let buf = '';
   p.stdout.on('data', (d) => {
     buf += d.toString('utf8');
@@ -288,12 +289,12 @@ function launch(resume) {
   p.on('error', (e) => {
     if (proc !== p) return;
     emit('log', { text: `Impossibile avviare claude: ${e.message}` });
-    proc = null;
+    setProc(null);
     setStatus('error');
   });
   p.on('close', (code) => {
     if (proc !== p) return; // processo sostituito da un riavvio con nuovi permessi
-    proc = null;
+    setProc(null);
     emitLive('live-clear', {}); liveBlocks.clear(); liveSnap.clear();
     emit('log', { text: `Processo terminato (exit ${code})` });
     setStatus(status === 'error' || code ? 'error' : 'done');
@@ -309,7 +310,7 @@ function allow(rules) {
   extraAllow = [...new Set([...extraAllow, ...ok])];
   pendingRules = new Map();
   stop();
-  proc = null; // il close del vecchio processo viene ignorato
+  setProc(null); // il close del vecchio processo viene ignorato
   launch(true);
   emit('log', { text: `Permessi concessi: ${ok.join(', ')}. Sessione ripresa.` });
   send('Il permesso richiesto è stato concesso. Riprova il comando negato e prosegui.');
@@ -349,34 +350,6 @@ function send(text, attachments) {
   proc.stdin.write(JSON.stringify({ type: 'user', message: { role: 'user', content: text } }) + '\n');
 }
 
-function demoEnter() {
-  if (state.demo) return;
-  if (proc) throw new Error('Termina la sessione in corso prima di entrare in modalità Demo');
-  const d = demo.create({ projects, jira });
-  state.demo = { prevRoot: state.root, base: d.base, restore: d.restore };
-  state.root = d.dir;
-  resetState(); setStatus('idle');
-}
-function demoLeave() {
-  if (!state.demo) return;
-  if (proc) throw new Error('Termina la sessione in corso prima di uscire dalla modalità Demo');
-  const d = state.demo; state.demo = null;
-  state.root = d.prevRoot;
-  d.restore(); demo.cleanup(d.base);
-  resetState(); setStatus('idle');
-}
-process.on('exit', () => { if (state.demo) demo.cleanup(state.demo.base); });
-
-function activate(dir) {
-  if (proc) throw new Error('Termina la sessione in corso prima di cambiare progetto');
-  const full = projects.validDir(dir, { mustBeEmptyOrMissing: false });
-  if (!fs.existsSync(full) || !fs.statSync(full).isDirectory()) throw new Error('Cartella non trovata');
-  state.root = full;
-  state.recent = [full, ...state.recent.filter((x) => x !== full)].slice(0, 8);
-  saveState();
-  resetState();
-  setStatus('idle');
-}
 
 /* ---------- Ask Claude: domande a margine (stile /btw) ----------
  * /btw esiste solo nel terminale interattivo. Qui si ottiene lo stesso effetto interrogando una COPIA della sessione
@@ -432,7 +405,6 @@ function stop() {
 
 
 const getStatus = () => status;
-const isRunning = () => !!proc;
 // Collega un browser al flusso degli eventi: stato corrente, messaggi completi già emessi, istantanee in diretta, poi gli aggiornamenti.
 function attachClient(req, res) {
   res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
@@ -443,4 +415,7 @@ function attachClient(req, res) {
   req.on('close', () => clients.delete(res));
 }
 
-module.exports = { STEPS, MAX_TOTAL, start, send, allow, stop, askBtw, activate, demoEnter, demoLeave, attachClient, getStatus, isRunning };
+// Progetto o modalità Demo cambiati (workspace.js): la sessione riparte da zero.
+state.events.on('reset', () => { resetState(); setStatus('idle'); });
+
+module.exports = { STEPS, MAX_TOTAL, start, send, allow, stop, askBtw, attachClient, getStatus };

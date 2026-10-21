@@ -1,8 +1,7 @@
 // Rotte git del progetto: stato e operazioni (mai mentre la pipeline scrive file).
 const git = require('../services/git');
-const session = require('../session');
 const { requireCap } = require('../http/caps');
-const { needRoot } = require('../state');
+const { state, needRoot } = require('../state');
 const { NOT_HANDLED } = require('./common');
 
 const isProtectedBranch = (s) => !!s.branch && (['main', 'master'].includes(s.branch) || s.branch === s.baseBranch);
@@ -17,7 +16,7 @@ module.exports = {
     const { req, res, json, body } = ctx;
     if (req.url.startsWith('/api/git/')) {
       // Le operazioni git modificano l'albero di lavoro: mai mentre la pipeline sta scrivendo file.
-      if (session.isRunning()) throw new Error('Termina la sessione in corso prima di operare su git.');
+      if (state.running) throw new Error('Termina la sessione in corso prima di operare su git.');
       const root = needRoot();
       const op = req.url.slice('/api/git/'.length);
       if (op === 'push' || op === 'merge') { const s0 = await git.status(root); if (isProtectedBranch(s0)) requireCap('git.protected', op === 'push' ? 'di pubblicare sul branch principale (' + s0.branch + ')' : 'di unire dentro il branch principale (' + s0.branch + ')'); }

@@ -2,7 +2,6 @@
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
-const { state, needRoot } = require('../state');
 
 // IntelliJ IDEA: UI_IDEA_BIN, poi le installazioni più comuni su Windows (la più recente per prima).
 let ideaBin;
@@ -23,9 +22,7 @@ function findIdea() {
   return ideaBin;
 }
 // Apre un file (o una cartella) del progetto in IntelliJ, alla riga indicata. Nessuna shell: argomenti passati come array.
-function openInIde(rel, line) {
-  if (state.demo) throw new Error('Non disponibile in modalità Demo: il progetto è una simulazione.');
-  const root = needRoot();
+function openInIde(root, rel, line) {
   const bin = findIdea();
   if (!bin) throw new Error('IntelliJ IDEA non trovato. Installalo oppure imposta la variabile UI_IDEA_BIN con il percorso di idea64.exe e riavvia la UI.');
   const full = path.resolve(root, String(rel || ''));

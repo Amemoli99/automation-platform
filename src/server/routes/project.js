@@ -2,8 +2,8 @@
 const path = require('path');
 const fs = require('fs');
 const projects = require('../services/projects');
+const workspace = require('../workspace');
 const jdks = require('../services/jdks');
-const session = require('../session');
 const { requireCap } = require('../http/caps');
 const { state, isDir, prefsFor, saveState, needRoot } = require('../state');
 const { NOT_HANDLED } = require('./common');
@@ -38,7 +38,7 @@ const projectInfo = () => ({
   name: state.root ? path.basename(state.root) : null,
   kit: projects.KIT,
   workspace: state.workspace,
-  running: session.isRunning(),
+  running: state.running,
   recent: state.recent.filter((d) => isDir(d) && d !== state.root),
   m2: projects.m2Status(),
   frameworkRepo: state.frameworkRepo,
@@ -55,7 +55,7 @@ module.exports = {
   async post(ctx) {
     const { req, res, json, body } = ctx;
     if (req.url === '/api/project/prepare') {
-      if (session.isRunning()) throw new Error('Termina la sessione in corso prima di preparare il progetto');
+      if (state.running) throw new Error('Termina la sessione in corso prima di preparare il progetto');
       const r = projects.configureExisting({ dir: needRoot(), prefs: prefsFor(state.root), addKit: !!body.addKit });
       return json(200, { ...r, inspect: projects.inspect(state.root, prefsFor(state.root)) });
     }
@@ -90,15 +90,15 @@ module.exports = {
       if (body.mode !== 'existing') requireCap('project.create', 'di creare nuovi progetti');
       if (body.mode === 'existing') {
         const r = projects.configureExisting({ ...body, prefs: prefsFor(body.dir) });
-        if (body.activate !== false) session.activate(r.dir);
+        if (body.activate !== false) workspace.activate(r.dir);
         return json(200, r);
       }
       const r = await projects.createProject(body);
       state.frameworkRepo = projects.validFrameworkRepo(body.frameworkRepo); saveState();
-      if (body.activate !== false) session.activate(r.dir);
+      if (body.activate !== false) workspace.activate(r.dir);
       return json(200, r);
     }
-    if (req.url === '/api/project/activate') return session.activate(body.dir), json(200, projectInfo());
+    if (req.url === '/api/project/activate') return workspace.activate(body.dir), json(200, projectInfo());
     if (req.url === '/api/project/verify') return json(200, await projects.verify(body.dir));
     if (req.url === '/api/m2/token') return json(200, projects.saveM2Token(body.username, body.token));
     return NOT_HANDLED;
