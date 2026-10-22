@@ -23,12 +23,23 @@ static class Launcher
         catch { return false; }
     }
 
-    // Il server scrive la chiave di accesso di questa sessione in %APPDATA%\developerTest-UI\session-<porta>.json.
-    static string SessionFile(int port)
+    static string DataDir()
     {
         var dir = Environment.GetEnvironmentVariable("UI_DATA_DIR");
         if (string.IsNullOrEmpty(dir)) dir = Path.Combine(Environment.GetEnvironmentVariable("APPDATA") ?? "", "developerTest-UI");
-        return Path.Combine(dir, "session-" + port + ".json");
+        return dir;
+    }
+
+    // Il server scrive la chiave di accesso di questa sessione in %APPDATA%\developerTest-UI\session-<porta>.json.
+    static string SessionFile(int port)
+    {
+        return Path.Combine(DataDir(), "session-" + port + ".json");
+    }
+
+    // Senza finestra console l'output del server va qui (riscritto a ogni avvio).
+    static string LogFile()
+    {
+        return Path.Combine(DataDir(), "server.log");
     }
 
     static string SessionToken(int port)
@@ -66,11 +77,14 @@ static class Launcher
             try { File.Delete(SessionFile(port)); } catch { /* il server lo riscrive comunque */ }
             try
             {
-                // Finestra console visibile: chiuderla (o Ctrl+C) ferma il server.
-                Process.Start(new ProcessStartInfo("node", "\"" + server + "\"")
+                // Nessuna finestra console: il server si ferma dal pulsante Chiudi dell'app.
+                // L'output passa da cmd (non da un pipe del launcher, che esce subito) e finisce in server.log.
+                Directory.CreateDirectory(DataDir());
+                Process.Start(new ProcessStartInfo("cmd.exe", "/c \"node \"" + server + "\" > \"" + LogFile() + "\" 2>&1\"")
                 {
                     WorkingDirectory = root,
-                    UseShellExecute = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
                 });
             }
             catch (Exception e)
@@ -83,7 +97,7 @@ static class Launcher
             {
                 if ((DateTime.UtcNow - t0).TotalSeconds > 15)
                 {
-                    MessageBox.Show("Il server non risponde su " + url + " dopo 15 s.\nControlla la finestra di Node per l'errore (porta occupata?).", "Nexsoft Automation Cockpit", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Il server non risponde su " + url + " dopo 15 s.\nControlla l'errore in " + LogFile() + " (Node non nel PATH? porta occupata?).", "Nexsoft Automation Cockpit", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return 1;
                 }
                 System.Threading.Thread.Sleep(250);
@@ -99,7 +113,7 @@ static class Launcher
         }
         if (token == null)
         {
-            MessageBox.Show("Il server è in esecuzione ma non ha pubblicato la chiave di accesso.\n\nÈ probabile che sia una versione precedente: chiudilo (finestra di Node) e riavvia questo programma.", "Nexsoft Automation Cockpit", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show("Il server è in esecuzione ma non ha pubblicato la chiave di accesso.\n\nÈ probabile che sia una versione precedente: chiudilo (pulsante Chiudi nell'app, o termina il processo node da Gestione attività) e riavvia questo programma.", "Nexsoft Automation Cockpit", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return 1;
         }
         // UI_LAUNCH_URL_FILE: solo per i test automatici (scrive l'indirizzo invece di aprire il browser)
