@@ -40,7 +40,7 @@ const freePort = () => new Promise((res) => { const s = net.createServer(); s.li
   let down = false;
   for (let i = 0; i < 20 && !down; i++) { await sleep(300); try { await fetch(base + '/api/version'); } catch { down = true; } }
   t('il server si ferma', down);
-  fs.rmSync(dir, { recursive: true, force: true });
+  try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 30, retryDelay: 500 }); } catch (e) { console.log('  (pulizia non riuscita, cartella temporanea lasciata: ' + dir + ')'); }
   console.log('RISULTATO: ' + ok + ' ok, ' + ko + ' ko');
   setTimeout(() => process.exit(ko ? 1 : 0), 250); // uscita differita: chiudere subito con connessioni aperte fa crashare libuv su Windows
 })().catch((e) => { console.log('ERRORE', e.message); process.exit(2); });
