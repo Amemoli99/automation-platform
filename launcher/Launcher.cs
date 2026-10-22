@@ -119,7 +119,81 @@ static class Launcher
         // UI_LAUNCH_URL_FILE: solo per i test automatici (scrive l'indirizzo invece di aprire il browser)
         var urlFile = Environment.GetEnvironmentVariable("UI_LAUNCH_URL_FILE");
         if (!string.IsNullOrEmpty(urlFile)) { File.WriteAllText(urlFile, url + "?t=" + token); return 0; }
-        Process.Start(new ProcessStartInfo(url + "?t=" + token) { UseShellExecute = true });
+        OpenUi(url + "?t=" + token);
         return 0;
+    }
+
+    // Edge o Chrome in modalità app (finestra senza barra degli indirizzi): lì il pulsante Chiudi della UI può chiudere la finestra
+    // (window.close() in una scheda normale è bloccato dal browser). Senza Edge/Chrome si apre il browser predefinito.
+    static string AppBrowser()
+    {
+        string pf = Environment.GetEnvironmentVariable("ProgramFiles"), pf86 = Environment.GetEnvironmentVariable("ProgramFiles(x86)"), local = Environment.GetEnvironmentVariable("LocalAppData");
+        var candidates = new[] {
+            Path.Combine(pf86 ?? "", @"Microsoft\Edge\Application\msedge.exe"), Path.Combine(pf ?? "", @"Microsoft\Edge\Application\msedge.exe"),
+            Path.Combine(pf ?? "", @"Google\Chrome\Application\chrome.exe"), Path.Combine(pf86 ?? "", @"Google\Chrome\Application\chrome.exe"),
+            Path.Combine(local ?? "", @"Google\Chrome\Application\chrome.exe"),
+        };
+        foreach (var c in candidates) if (File.Exists(c)) return c;
+        return null;
+    }
+
+    // Il browser ricorda la dimensione dell'ultima finestra app e --start-maximized non basta: si passano le misure e, se serve, si massimizza da qui.
+    // Finestre della UI = finestre Chrome/Edge con il titolo della pagina; si prende quella comparsa dopo l'avvio.
+    [System.Runtime.InteropServices.DllImport("user32.dll")] static extern bool EnumWindows(EnumProc cb, IntPtr p);
+    [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)] static extern int GetWindowText(IntPtr h, System.Text.StringBuilder s, int n);
+    [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)] static extern int GetClassName(IntPtr h, System.Text.StringBuilder s, int n);
+    [System.Runtime.InteropServices.DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
+    [System.Runtime.InteropServices.DllImport("user32.dll")] static extern bool ShowWindow(IntPtr h, int cmd);
+    [System.Runtime.InteropServices.DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr h);
+    delegate bool EnumProc(IntPtr h, IntPtr p);
+
+    static System.Collections.Generic.List<IntPtr> UiWindows()
+    {
+        var list = new System.Collections.Generic.List<IntPtr>();
+        EnumWindows((h, p) =>
+        {
+            if (!IsWindowVisible(h)) return true;
+            var cls = new System.Text.StringBuilder(64); GetClassName(h, cls, 64);
+            if (cls.ToString() != "Chrome_WidgetWin_1") return true;
+            var title = new System.Text.StringBuilder(256); GetWindowText(h, title, 256);
+            if (title.ToString().Contains("Nexsoft Automation Cockpit Platform")) list.Add(h);
+            return true;
+        }, IntPtr.Zero);
+        return list;
+    }
+
+    static void MaximizeNewWindow(System.Collections.Generic.List<IntPtr> before)
+    {
+        for (int i = 0; i < 60; i++) // fino a ~15 s
+        {
+            foreach (var h in UiWindows())
+                if (!before.Contains(h)) { ShowWindow(h, 3 /* SW_MAXIMIZE */); SetForegroundWindow(h); return; }
+            System.Threading.Thread.Sleep(250);
+        }
+    }
+
+    static void OpenUi(string address)
+    {
+        var browser = AppBrowser();
+        if (browser != null)
+        {
+            try
+            {
+                var before = UiWindows();
+                // Posizione e dimensione esplicite (area di lavoro dello schermo principale): la finestra nasce già grande invece di
+                // usare l'ultima dimensione ricordata dal browser. Valori in pixel logici, come li vuole il browser.
+                var wa = Screen.PrimaryScreen.WorkingArea;
+                // Profilo dedicato all'app: con un browser già aperto l'avvio passerebbe all'istanza esistente, che ignora posizione e misure.
+                var data = Environment.GetEnvironmentVariable("UI_DATA_DIR");
+                if (string.IsNullOrEmpty(data)) data = Path.Combine(Environment.GetEnvironmentVariable("APPDATA") ?? Path.GetTempPath(), "developerTest-UI");
+                var profile = Path.Combine(data, "browser");
+                var args = "--user-data-dir=\"" + profile + "\" --no-first-run --no-default-browser-check --disable-sync --disable-features=msImplicitSignin,msEdgeImplicitSignin,msEdgeSyncConsent --window-position=" + wa.X + "," + wa.Y + " --window-size=" + wa.Width + "," + wa.Height + " --app=\"" + address + "\"";
+                Process.Start(new ProcessStartInfo(browser, args) { UseShellExecute = false });
+                MaximizeNewWindow(before); // rete di sicurezza: se il browser ignora le misure, la finestra si massimizza comunque
+                return;
+            }
+            catch { /* ripiego sul browser predefinito */ }
+        }
+        Process.Start(new ProcessStartInfo(address) { UseShellExecute = true });
     }
 }
