@@ -45,6 +45,7 @@ function renderProject() {
   document.querySelector('nav button[data-tab="dash"]').hidden = !attached;
   if (attached) refreshMcpNav(); else { MCPV.key = null; MCPV.servers = []; document.querySelectorAll('nav button.mcpnav').forEach((x) => x.remove()); }
   $('goto-dash').hidden = !attached;
+  $('detach-btn').hidden = !attached || demoOn; // in Demo il progetto è quello di prova: non si sgancia
   if (!attached && curTab === 'dash') gotoTab('project');
   const envFail = proj.env ? proj.env.filter((r) => r.status === 'fail') : [];
   projOk = !!(attached && s && s.ready && !envFail.length);

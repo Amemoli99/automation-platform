@@ -239,6 +239,37 @@ $('cfg-port').textContent = location.port || '80';
   $('side-toggle').onclick = () => { side.classList.toggle('collapsed'); store.set('sideCollapsed', side.classList.contains('collapsed') ? '1' : '0'); };
 }
 
+/* ---------- sgancio del progetto ---------- */
+// Lavoro in sospeso = stesse regole dello sgancio automatico alla chiusura (main.js, detachIfClean): file modificati o non tracciati
+// (esclusi quelli di servizio della piattaforma), commit non pubblicati, branch mai pubblicato, HEAD staccato, merge in corso.
+function pendingGitWork(s) {
+  if (!s || !s.isRepo) return [];
+  const own = (p) => /^(\.tmp|\.playwright-mcp)(\/|$)/.test(p);
+  const platformFile = (p) => /^(\.mcp\.json|\.claude\/(settings|settings\.local|pipeline|pipeline-steps)\.json)$/.test(p);
+  const out = [];
+  if (!s.branch) out.push('HEAD staccato (nessun branch)');
+  if (s.merging) out.push('merge in corso');
+  const files = (s.entries || []).filter((e) => !((e.untracked && own(e.path)) || platformFile(e.path)));
+  if (files.length) out.push(files.length + ' file da committare (modificati o non tracciati)');
+  if (s.hasRemote && s.ahead > 0) out.push(s.ahead + (s.ahead === 1 ? ' commit non pubblicato' : ' commit non pubblicati') + ' (push)');
+  else if (s.hasRemote && !s.upstream && s.branch) out.push('il branch "' + s.branch + '" non è mai stato pubblicato (push)');
+  return out;
+}
+$('detach-btn').onclick = async () => {
+  if (lastStatus === 'running' || lastStatus === 'waiting') { toast('Termina la sessione in corso prima di sganciare il progetto.', true); return; }
+  let st = null;
+  try { st = await call('/api/git/status'); } catch { /* repo non leggibile: nessun lavoro rilevabile */ }
+  const pending = pendingGitWork(st);
+  if (pending.length) {
+    const msg = 'Nel progetto "' + (proj.info && proj.info.name) + '" c\'è lavoro Git non ancora sistemato:\n• ' + pending.join('\n• ') + '\n\nSganciando il progetto il lavoro resta sul disco, ma non verrà committato né pubblicato. Continuare?';
+    if (!(await askConfirm(msg, { title: 'Sgancia Progetto', ok: 'Conferma', cancel: 'Annulla', danger: true }))) return;
+  }
+  try { await call('/api/project/detach', {}); } catch (e) { toast('Sgancio non riuscito: ' + e.message, true); return; }
+  await loadProject();
+  gotoTab('project');
+  toast('Progetto sganciato.');
+};
+
 /* ---------- chiusura della UI ---------- */
 $('quit').onclick = async () => {
   const active = lastStatus === 'running' || lastStatus === 'waiting';

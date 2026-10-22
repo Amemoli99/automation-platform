@@ -4,4 +4,5 @@ module.exports = {
   get config() { return require('./config'); },
   get jdks() { return require('./jdks'); },
   get activate() { return require('./activate').activate; },
+  get detach() { return require('./activate').detach; },
 };

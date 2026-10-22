@@ -399,6 +399,10 @@
   .side-foot .pill { justify-content:flex-start; max-width:100%; text-transform:none; letter-spacing:0; }
   .side-foot #quit { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; }
   .side-foot #quit svg { width:17px; height:17px; }
+  .side-foot #detach-btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; }
+  .side-foot #detach-btn[hidden] { display:none; }
+  .side-foot #detach-btn svg { width:17px; height:17px; }
+  .side.collapsed .side-foot #detach-btn { padding:9px 0; }
   .app-ver { text-align:center; font-size:11px; color:var(--muted); user-select:text; }
   .side.collapsed .app-ver { display:none; }
   @media (max-width:1180px) { .app-ver { display:none; } }

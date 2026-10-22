@@ -10,7 +10,7 @@ const SIM = require('../../infra/paths').SIM_FILE;
 const PROJECT_NAME = 'Demo Portal';
 const ORIGIN = 'https://demo.atlassian.net';
 const BLOCKED = new Set([
-  '/api/project/activate', '/api/project/create', '/api/project/pick-folder', '/api/project/pipeline',
+  '/api/project/activate', '/api/project/detach', '/api/project/create', '/api/project/pick-folder', '/api/project/pipeline',
   '/api/repos/clone', '/api/repos/sources', '/api/ide/open',
 ]);
 

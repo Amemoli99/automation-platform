@@ -13,4 +13,14 @@ function activate(dir) {
   state.events.emit('reset');
 }
 
-module.exports = { activate };
+// Sgancia il progetto corrente (resta tra i recenti): la sessione riparte da zero.
+function detach() {
+  if (state.running) throw new Error('Termina la sessione in corso prima di sganciare il progetto');
+  if (!state.root) return;
+  state.recent = [state.root, ...state.recent.filter((x) => x !== state.root)].slice(0, 8);
+  state.root = null;
+  saveState();
+  state.events.emit('reset');
+}
+
+module.exports = { activate, detach };

@@ -1,7 +1,7 @@
 // Rotte del progetto che cambiano lo stato dell'app (progetto agganciato, recenti, preferenze per progetto, repository del framework):
 // le possiede il gateway. Il lavoro sui file del progetto lo fa l'area project, che può girare come servizio.
 const path = require('path');
-const { projects, jdks, activate } = require('../areas/project');
+const { projects, jdks, activate, detach } = require('../areas/project');
 const { state, isDir, prefsFor, saveState, needRoot } = require('../state');
 const { NOT_HANDLED, requireCap } = require('../http/route');
 
@@ -60,6 +60,7 @@ module.exports = {
       return json(200, r);
     }
     if (req.url === '/api/project/activate') return activate(body.dir), json(200, projectInfo());
+    if (req.url === '/api/project/detach') return detach(), json(200, projectInfo());
     return NOT_HANDLED;
   },
 };
